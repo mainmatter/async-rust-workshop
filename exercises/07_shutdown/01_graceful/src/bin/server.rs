@@ -1,8 +1,10 @@
 use std::io;
 
-use shutdown_graceful::Store;
-use shutdown_graceful::actor::StoreHandle;
-use shutdown_graceful::server::{MAX_CONNECTIONS, serve};
+use shutdown_graceful::{
+    Store,
+    actor::StoreHandle,
+    server::{MAX_CONNECTIONS, serve},
+};
 use tokio::net::TcpListener;
 use tokio_util::sync::CancellationToken;
 

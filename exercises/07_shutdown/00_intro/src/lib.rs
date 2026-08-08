@@ -2,11 +2,11 @@
 //!
 //! Nothing to write here. Two facts about tasks that only hurt at the end of a process's life.
 //!
-//! **Nobody is told to stop.** Dropping a `JoinHandle` detaches the task, it does not cancel it, and
-//! `abort` cancels it at its next await point with no chance to finish what it started. Neither is
-//! what you want for a connection in the middle of a write. What you want is to ask, and then wait,
-//! and that needs a channel: `CancellationToken` is one, shaped for exactly this, and a `watch`
-//! channel is the same idea with a payload.
+//! **Nobody is told to stop.** Dropping a `JoinHandle` detaches the task, it does not cancel it,
+//! and `abort` cancels it at its next await point with no chance to finish what it started. Neither
+//! is what you want for a connection in the middle of a write. What you want is to ask, and then
+//! wait, and that needs a channel: `CancellationToken` is one, shaped for exactly this, and a
+//! `watch` channel is the same idea with a payload.
 //!
 //! **Nobody notices a task that died.** A panic inside a spawned task does not propagate: it is
 //! captured, the task ends, and the panic is delivered to whoever awaits the `JoinHandle` as
@@ -23,8 +23,10 @@ pub mod actor;
 pub mod protocol;
 pub mod server;
 
-use std::collections::HashMap;
-use std::fmt::{self, Debug, Formatter};
+use std::{
+    collections::HashMap,
+    fmt::{self, Debug, Formatter},
+};
 
 const MAX_NAME_LENGTH: usize = 64;
 const MAX_VALUE_LENGTH: usize = 4096;

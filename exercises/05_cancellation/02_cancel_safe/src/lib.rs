@@ -11,23 +11,25 @@
 //! They are gone because `select!` dropped the read future when the tick fired, and that future
 //! owned the buffer holding `GET users al`. Nothing was written down anywhere that survives.
 //!
-//! That is what **cancel safety** means, and it is a property of the API you call, not of your code.
-//! `AsyncBufReadExt::next_line` is cancel safe: the bytes it has read live in the `BufReader`, which
-//! you own and which outlives any individual call, so dropping the future loses nothing and you can
-//! call it again. `read_line_by_hand` is not, and no type says so.
+//! That is what **cancel safety** means, and it is a property of the API you call, not of your
+//! code. `AsyncBufReadExt::next_line` is cancel safe: the bytes it has read live in the
+//! `BufReader`, which you own and which outlives any individual call, so dropping the future loses
+//! nothing and you can call it again. `read_line_by_hand` is not, and no type says so.
 //!
 //! Fix `handle_connection` by reading with `next_line` again, and delete `read_line_by_hand`.
 //!
-//! The habit to take home: before putting a call in a `select!` branch, look up whether its docs say
-//! it is cancel safe. Tokio documents this per method, under "Cancel safety". If it does not say, or
-//! if you wrote it yourself, assume it is not.
+//! The habit to take home: before putting a call in a `select!` branch, look up whether its docs
+//! say it is cancel safe. Tokio documents this per method, under "Cancel safety". If it does not
+//! say, or if you wrote it yourself, assume it is not.
 
 pub mod actor;
 pub mod protocol;
 pub mod server;
 
-use std::collections::HashMap;
-use std::fmt::{self, Debug, Formatter};
+use std::{
+    collections::HashMap,
+    fmt::{self, Debug, Formatter},
+};
 
 const MAX_NAME_LENGTH: usize = 64;
 const MAX_VALUE_LENGTH: usize = 4096;

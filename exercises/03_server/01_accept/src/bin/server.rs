@@ -1,7 +1,6 @@
 use std::io;
 
-use server_accept::Store;
-use server_accept::server::serve;
+use server_accept::{Store, server::serve};
 use tokio::net::TcpListener;
 
 #[tokio::main]

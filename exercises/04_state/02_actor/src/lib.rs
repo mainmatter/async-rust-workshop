@@ -18,9 +18,9 @@
 //! shorter: no lock, no clone-out-of-the-guard, no guard lifetime to think about.
 //!
 //! Notice what a `oneshot` costs and what it buys. It is an allocation per request, which the mutex
-//! did not need. In exchange, the store is never contended, the critical section cannot accidentally
-//! grow to include an `.await`, and the actor can later batch, reorder, or write to a log before
-//! answering: chapter 9 does exactly that, and it would be a rewrite under the mutex.
+//! did not need. In exchange, the store is never contended, the critical section cannot
+//! accidentally grow to include an `.await`, and the actor can later batch, reorder, or write to a
+//! log before answering: chapter 9 does exactly that, and it would be a rewrite under the mutex.
 //!
 //! There is a benchmark in `benches/store.rs` comparing the two under contention. It is not graded
 //! and `wr` does not run it. `cargo bench` does, when you want the number rather than the argument.
@@ -29,8 +29,10 @@ pub mod actor;
 pub mod protocol;
 pub mod server;
 
-use std::collections::HashMap;
-use std::fmt::{self, Debug, Formatter};
+use std::{
+    collections::HashMap,
+    fmt::{self, Debug, Formatter},
+};
 
 const MAX_NAME_LENGTH: usize = 64;
 const MAX_VALUE_LENGTH: usize = 4096;

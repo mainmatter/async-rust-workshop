@@ -1,8 +1,6 @@
 use std::io;
 
-use backpressure_intro::Store;
-use backpressure_intro::actor::StoreHandle;
-use backpressure_intro::server::serve;
+use backpressure_intro::{Store, actor::StoreHandle, server::serve};
 use tokio::net::TcpListener;
 
 #[tokio::main]

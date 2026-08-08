@@ -20,8 +20,10 @@ pub mod actor;
 pub mod protocol;
 pub mod server;
 
-use std::collections::HashMap;
-use std::fmt::{self, Debug, Formatter};
+use std::{
+    collections::HashMap,
+    fmt::{self, Debug, Formatter},
+};
 
 const MAX_NAME_LENGTH: usize = 64;
 const MAX_VALUE_LENGTH: usize = 4096;

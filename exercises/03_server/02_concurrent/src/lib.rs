@@ -1,15 +1,15 @@
 //! # Exercise
 //!
-//! One client at a time is not a server, it is a queue with extra steps. While the first client sits
-//! there thinking, everybody else waits, and `minidb` is not even doing anything.
+//! One client at a time is not a server, it is a queue with extra steps. While the first client
+//! sits there thinking, everybody else waits, and `minidb` is not even doing anything.
 //!
 //! Rewrite `serve` so every accepted connection is handled on its own task. The accept loop should
 //! do nothing but accept: take the connection, spawn, go back to waiting.
 //!
 //! That immediately raises the question this chapter cannot answer. A spawned task has to own what
 //! it touches, and there is only one `Store`, so for now each connection gets one of its own. The
-//! second test says so out loud: two clients, two stores, and a value written by one is invisible to
-//! the other. It is a real server that is useless.
+//! second test says so out loud: two clients, two stores, and a value written by one is invisible
+//! to the other. It is a real server that is useless.
 //!
 //! Chapter 4 is about giving them back a single store, and about the two ways to do it.
 //!
@@ -19,8 +19,10 @@
 pub mod protocol;
 pub mod server;
 
-use std::collections::HashMap;
-use std::fmt::{self, Debug, Formatter};
+use std::{
+    collections::HashMap,
+    fmt::{self, Debug, Formatter},
+};
 
 const MAX_NAME_LENGTH: usize = 64;
 const MAX_VALUE_LENGTH: usize = 4096;

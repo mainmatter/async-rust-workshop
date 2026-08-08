@@ -6,12 +6,12 @@
 //! down: nothing restarts it, and every health check that only asks "is the port open" says yes.
 //!
 //! Make `serve` notice. `StoreHandle` now exposes `closed`, which resolves when the store task has
-//! gone away: `mpsc::Sender::closed` does the work, since the receiver is dropped when the task ends,
-//! whether it returned or panicked.
+//! gone away: `mpsc::Sender::closed` does the work, since the receiver is dropped when the task
+//! ends, whether it returned or panicked.
 //!
 //! Add it as a third branch of the `select!` in the accept loop, and return an error from `serve`
-//! when it fires. The binary then exits, and whatever supervises the process, systemd, Kubernetes, a
-//! shell loop, gets to do its job.
+//! when it fires. The binary then exits, and whatever supervises the process, systemd, Kubernetes,
+//! a shell loop, gets to do its job.
 //!
 //! This is the whole of supervision in Tokio: there is no supervisor tree, so somebody has to await
 //! the thing that matters and decide what its death means. Choosing to die is a real answer, and it
@@ -21,8 +21,10 @@ pub mod actor;
 pub mod protocol;
 pub mod server;
 
-use std::collections::HashMap;
-use std::fmt::{self, Debug, Formatter};
+use std::{
+    collections::HashMap,
+    fmt::{self, Debug, Formatter},
+};
 
 const MAX_NAME_LENGTH: usize = 64;
 const MAX_VALUE_LENGTH: usize = 4096;

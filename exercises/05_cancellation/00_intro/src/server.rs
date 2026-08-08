@@ -2,12 +2,16 @@
 
 use std::io;
 
-use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncWrite, AsyncWriteExt, BufReader};
-use tokio::net::TcpListener;
+use tokio::{
+    io::{AsyncBufReadExt, AsyncRead, AsyncWrite, AsyncWriteExt, BufReader},
+    net::TcpListener,
+};
 
-use crate::Store;
-use crate::actor::StoreHandle;
-use crate::protocol::{Request, Response};
+use crate::{
+    Store,
+    actor::StoreHandle,
+    protocol::{Request, Response},
+};
 
 /// Serves every client that turns up, each on a task of its own, all talking to one store task.
 pub async fn serve(listener: TcpListener, store: StoreHandle) -> io::Result<()> {

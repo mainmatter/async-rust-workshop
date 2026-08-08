@@ -1,14 +1,17 @@
 //! The socket half of `minidb`.
 
-use std::io;
-use std::sync::Arc;
+use std::{io, sync::Arc};
 
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-use tokio::net::{TcpListener, TcpStream};
-use tokio::sync::Mutex;
+use tokio::{
+    io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
+    net::{TcpListener, TcpStream},
+    sync::Mutex,
+};
 
-use crate::Store;
-use crate::protocol::{Request, Response};
+use crate::{
+    Store,
+    protocol::{Request, Response},
+};
 
 /// Serves every client that turns up, each on a task of its own, all sharing one store.
 pub async fn serve(listener: TcpListener, store: Arc<Mutex<Store>>) -> io::Result<()> {
@@ -49,18 +52,19 @@ pub fn apply(request: Request, store: &mut Store) -> Response {
 
 #[cfg(test)]
 mod tests {
-    use std::net::SocketAddr;
-    use std::sync::Arc;
-    use std::time::Duration;
+    use std::{net::SocketAddr, sync::Arc, time::Duration};
 
-    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader, Lines};
-    use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
-    use tokio::net::{TcpListener, TcpStream};
-    use tokio::sync::Mutex;
-    use tokio::time::timeout;
+    use tokio::{
+        io::{AsyncBufReadExt, AsyncWriteExt, BufReader, Lines},
+        net::{
+            TcpListener, TcpStream,
+            tcp::{OwnedReadHalf, OwnedWriteHalf},
+        },
+        sync::Mutex,
+        time::timeout,
+    };
 
-    use crate::Store;
-    use crate::server::serve;
+    use crate::{Store, server::serve};
 
     #[tokio::test]
     async fn what_one_client_writes_another_one_reads() {

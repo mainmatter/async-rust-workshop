@@ -1,8 +1,6 @@
 use std::io;
 
-use state_actor::Store;
-use state_actor::actor::StoreHandle;
-use state_actor::server::serve;
+use state_actor::{Store, actor::StoreHandle, server::serve};
 use tokio::net::TcpListener;
 
 #[tokio::main]

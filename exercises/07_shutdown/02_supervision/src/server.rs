@@ -1,19 +1,20 @@
 //! The socket half of `minidb`.
 
-use std::io;
-use std::sync::Arc;
-use std::time::Duration;
+use std::{io, sync::Arc, time::Duration};
 
-use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncWrite, AsyncWriteExt, BufReader};
-use tokio::net::TcpListener;
-use tokio::sync::Semaphore;
-use tokio_util::sync::CancellationToken;
-use tokio_util::task::TaskTracker;
-use tokio::time::{interval, sleep, timeout};
+use tokio::{
+    io::{AsyncBufReadExt, AsyncRead, AsyncWrite, AsyncWriteExt, BufReader},
+    net::TcpListener,
+    sync::Semaphore,
+    time::{interval, sleep, timeout},
+};
+use tokio_util::{sync::CancellationToken, task::TaskTracker};
 
-use crate::Store;
-use crate::actor::StoreHandle;
-use crate::protocol::{Request, Response};
+use crate::{
+    Store,
+    actor::StoreHandle,
+    protocol::{Request, Response},
+};
 
 /// How long a connection may say nothing before it is closed.
 pub const IDLE_LIMIT: Duration = Duration::from_secs(30);
@@ -117,19 +118,20 @@ pub fn apply(request: Request, store: &mut Store) -> Response {
 
 #[cfg(test)]
 mod tests {
-    use std::net::SocketAddr;
-    use std::time::Duration;
+    use std::{net::SocketAddr, time::Duration};
 
-    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader, Lines};
-    use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
-    use tokio::net::{TcpListener, TcpStream};
-    use tokio::task::JoinHandle;
-    use tokio::time::timeout;
+    use tokio::{
+        io::{AsyncBufReadExt, AsyncWriteExt, BufReader, Lines},
+        net::{
+            TcpListener, TcpStream,
+            tcp::{OwnedReadHalf, OwnedWriteHalf},
+        },
+        task::JoinHandle,
+        time::timeout,
+    };
     use tokio_util::sync::CancellationToken;
 
-    use crate::Store;
-    use crate::actor::StoreHandle;
-    use crate::server::serve;
+    use crate::{Store, actor::StoreHandle, server::serve};
 
     #[tokio::test]
     async fn a_dead_store_takes_the_server_with_it() {
@@ -157,7 +159,9 @@ mod tests {
         assert_eq!(client.request("SET users alice hello").await, "OK");
 
         assert!(
-            timeout(Duration::from_millis(300), &mut server).await.is_err(),
+            timeout(Duration::from_millis(300), &mut server)
+                .await
+                .is_err(),
             "nothing is wrong and the server stopped anyway"
         );
 
@@ -202,7 +206,11 @@ mod tests {
 
     async fn spawn_server(
         store: StoreHandle,
-    ) -> (SocketAddr, CancellationToken, JoinHandle<std::io::Result<()>>) {
+    ) -> (
+        SocketAddr,
+        CancellationToken,
+        JoinHandle<std::io::Result<()>>,
+    ) {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap();
         let shutdown = CancellationToken::new();

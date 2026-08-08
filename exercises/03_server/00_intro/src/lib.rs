@@ -18,9 +18,9 @@
 //! The price is that a value may not contain a newline, which is why `Value::parse` rejects one:
 //! the type makes the protocol total, so no value can ever be written that cannot be read back.
 //!
-//! Reading and writing lines is `AsyncBufReadExt::next_line` and `AsyncWriteExt::write_all`. That is
-//! the whole of the framing, and `next_line` will matter again in chapter 5 for a reason that is not
-//! obvious yet.
+//! Reading and writing lines is `AsyncBufReadExt::next_line` and `AsyncWriteExt::write_all`. That
+//! is the whole of the framing, and `next_line` will matter again in chapter 5 for a reason that is
+//! not obvious yet.
 //!
 //! **The protocol is frozen here.** Every exercise from now on carries a client binary that speaks
 //! it, so `Request` and `Response` do not change again, no matter how much the code behind them
@@ -28,8 +28,10 @@
 
 pub mod protocol;
 
-use std::collections::HashMap;
-use std::fmt::{self, Debug, Formatter};
+use std::{
+    collections::HashMap,
+    fmt::{self, Debug, Formatter},
+};
 
 const MAX_NAME_LENGTH: usize = 64;
 const MAX_VALUE_LENGTH: usize = 4096;

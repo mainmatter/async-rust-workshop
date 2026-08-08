@@ -2,12 +2,16 @@
 
 use std::io;
 
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-use tokio::net::{TcpListener, TcpStream};
+use tokio::{
+    io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
+    net::{TcpListener, TcpStream},
+};
 
-use crate::Store;
-use crate::actor::StoreHandle;
-use crate::protocol::{Request, Response};
+use crate::{
+    Store,
+    actor::StoreHandle,
+    protocol::{Request, Response},
+};
 
 /// Serves every client that turns up, each on a task of its own, all talking to one store task.
 pub async fn serve(listener: TcpListener, store: StoreHandle) -> io::Result<()> {
@@ -48,17 +52,18 @@ pub fn apply(request: Request, store: &mut Store) -> Response {
 
 #[cfg(test)]
 mod tests {
-    use std::net::SocketAddr;
-    use std::time::Duration;
+    use std::{net::SocketAddr, time::Duration};
 
-    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader, Lines};
-    use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
-    use tokio::net::{TcpListener, TcpStream};
-    use tokio::time::timeout;
+    use tokio::{
+        io::{AsyncBufReadExt, AsyncWriteExt, BufReader, Lines},
+        net::{
+            TcpListener, TcpStream,
+            tcp::{OwnedReadHalf, OwnedWriteHalf},
+        },
+        time::timeout,
+    };
 
-    use crate::Store;
-    use crate::actor::StoreHandle;
-    use crate::server::serve;
+    use crate::{Store, actor::StoreHandle, server::serve};
 
     #[tokio::test]
     async fn what_one_client_writes_another_one_reads() {

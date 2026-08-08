@@ -1,15 +1,18 @@
 //! The socket half of `minidb`.
 
-use std::io;
-use std::time::Duration;
+use std::{io, time::Duration};
 
-use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncWrite, AsyncWriteExt, BufReader};
-use tokio::net::TcpListener;
-use tokio::time::{interval, sleep, timeout};
+use tokio::{
+    io::{AsyncBufReadExt, AsyncRead, AsyncWrite, AsyncWriteExt, BufReader},
+    net::TcpListener,
+    time::{interval, sleep, timeout},
+};
 
-use crate::Store;
-use crate::actor::StoreHandle;
-use crate::protocol::{Request, Response};
+use crate::{
+    Store,
+    actor::StoreHandle,
+    protocol::{Request, Response},
+};
 
 /// How long a connection may say nothing before it is closed.
 pub const IDLE_LIMIT: Duration = Duration::from_secs(30);
@@ -24,7 +27,11 @@ pub const TICK: Duration = Duration::from_secs(5);
 pub const REQUEST_LIMIT: Duration = Duration::from_secs(2);
 
 /// Serves clients, at most `max_connections` of them at a time.
-pub async fn serve(listener: TcpListener, store: StoreHandle, max_connections: usize) -> io::Result<()> {
+pub async fn serve(
+    listener: TcpListener,
+    store: StoreHandle,
+    max_connections: usize,
+) -> io::Result<()> {
     loop {
         let (stream, _) = listener.accept().await?;
         let store = store.clone();
@@ -89,17 +96,18 @@ pub fn apply(request: Request, store: &mut Store) -> Response {
 
 #[cfg(test)]
 mod tests {
-    use std::net::SocketAddr;
-    use std::time::Duration;
+    use std::{net::SocketAddr, time::Duration};
 
-    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader, Lines};
-    use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
-    use tokio::net::{TcpListener, TcpStream};
-    use tokio::time::timeout;
+    use tokio::{
+        io::{AsyncBufReadExt, AsyncWriteExt, BufReader, Lines},
+        net::{
+            TcpListener, TcpStream,
+            tcp::{OwnedReadHalf, OwnedWriteHalf},
+        },
+        time::timeout,
+    };
 
-    use crate::Store;
-    use crate::actor::StoreHandle;
-    use crate::server::serve;
+    use crate::{Store, actor::StoreHandle, server::serve};
 
     const LIMIT: usize = 2;
 

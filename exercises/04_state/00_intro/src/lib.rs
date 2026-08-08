@@ -33,19 +33,21 @@
 //! is held for an unbounded time, because the task may not be polled again for a while.
 //!
 //! **`tokio::sync::Mutex` is the one you may hold across an await**, and `shared_set` below does
-//! exactly that. It costs more than the `std` one, and it is the right choice only when the critical
-//! section genuinely has to await.
+//! exactly that. It costs more than the `std` one, and it is the right choice only when the
+//! critical section genuinely has to await.
 //!
-//! The thing both have in common is the point of the chapter: whoever holds the lock, everybody else
-//! waits. A hundred connections and one mutex is a hundred connections taking turns, and the
+//! The thing both have in common is the point of the chapter: whoever holds the lock, everybody
+//! else waits. A hundred connections and one mutex is a hundred connections taking turns, and the
 //! contention does not show up in any type. The next two exercises are those two designs, in the
 //! server, one after the other.
 
 pub mod protocol;
 
-use std::collections::HashMap;
-use std::sync::Arc;
-use std::fmt::{self, Debug, Formatter};
+use std::{
+    collections::HashMap,
+    fmt::{self, Debug, Formatter},
+    sync::Arc,
+};
 
 use tokio::sync::Mutex;
 

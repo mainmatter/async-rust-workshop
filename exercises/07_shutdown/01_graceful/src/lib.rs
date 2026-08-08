@@ -9,22 +9,24 @@
 //! - let the connections already in flight finish what they are doing,
 //! - and return only once they have.
 //!
-//! `select!` on `token.cancelled()` and `listener.accept()` gives you the first half. For the second,
-//! spawn connections through a `TaskTracker` and `close()` then `wait()` for it. Doing the two in the
-//! wrong order hangs: a tracker that is not closed never finishes waiting, because more tasks could
-//! always arrive.
+//! `select!` on `token.cancelled()` and `listener.accept()` gives you the first half. For the
+//! second, spawn connections through a `TaskTracker` and `close()` then `wait()` for it. Doing the
+//! two in the wrong order hangs: a tracker that is not closed never finishes waiting, because more
+//! tasks could always arrive.
 //!
-//! Notice what is not here. Nothing forces a connection to end, so a client that sends nothing keeps
-//! the shutdown waiting until its idle timeout fires. Real servers pair this with a deadline: wait
-//! politely for a few seconds, then stop waiting. `tokio::time::timeout` around the `wait()` is all
-//! that takes, and the test does not require it.
+//! Notice what is not here. Nothing forces a connection to end, so a client that sends nothing
+//! keeps the shutdown waiting until its idle timeout fires. Real servers pair this with a deadline:
+//! wait politely for a few seconds, then stop waiting. `tokio::time::timeout` around the `wait()`
+//! is all that takes, and the test does not require it.
 
 pub mod actor;
 pub mod protocol;
 pub mod server;
 
-use std::collections::HashMap;
-use std::fmt::{self, Debug, Formatter};
+use std::{
+    collections::HashMap,
+    fmt::{self, Debug, Formatter},
+};
 
 const MAX_NAME_LENGTH: usize = 64;
 const MAX_VALUE_LENGTH: usize = 4096;

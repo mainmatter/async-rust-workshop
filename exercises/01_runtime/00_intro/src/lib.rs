@@ -12,9 +12,9 @@
 //! `.await` is held across that gap, which is where most of the surprises in this workshop come
 //! from.
 //!
-//! **Concurrency is not parallelism.** Two futures awaited one after the other take as long as both.
-//! The same two futures handed to `join!` take as long as the slower one, on a single thread, with
-//! no parallelism anywhere. `sequential` and `concurrent` below differ by nothing else.
+//! **Concurrency is not parallelism.** Two futures awaited one after the other take as long as
+//! both. The same two futures handed to `join!` take as long as the slower one, on a single thread,
+//! with no parallelism anywhere. `sequential` and `concurrent` below differ by nothing else.
 //!
 //! **The machinery, once, and then never again.** `PollCounter` is a `Future` written by hand. It
 //! returns `Poll::Pending` until it has been polled often enough, and wakes itself so the runtime
@@ -24,12 +24,14 @@
 //! You will not write another `poll` today. From here on the runtime does it, and the workshop is
 //! about the decisions you still have to make.
 
-use std::cell::Cell;
-use std::collections::HashMap;
-use std::fmt::{self, Debug, Formatter};
-use std::pin::Pin;
-use std::task::{Context, Poll};
-use std::time::Duration;
+use std::{
+    cell::Cell,
+    collections::HashMap,
+    fmt::{self, Debug, Formatter},
+    pin::Pin,
+    task::{Context, Poll},
+    time::Duration,
+};
 
 use tokio::time::sleep;
 
@@ -216,8 +218,7 @@ fn is_valid_char(c: char) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use std::cell::Cell;
-    use std::time::Duration;
+    use std::{cell::Cell, time::Duration};
 
     use tokio::time::Instant;
 

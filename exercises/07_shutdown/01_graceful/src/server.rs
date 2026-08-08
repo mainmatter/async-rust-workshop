@@ -1,18 +1,20 @@
 //! The socket half of `minidb`.
 
-use std::io;
-use std::sync::Arc;
-use std::time::Duration;
+use std::{io, sync::Arc, time::Duration};
 
-use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncWrite, AsyncWriteExt, BufReader};
-use tokio::net::TcpListener;
-use tokio::sync::Semaphore;
+use tokio::{
+    io::{AsyncBufReadExt, AsyncRead, AsyncWrite, AsyncWriteExt, BufReader},
+    net::TcpListener,
+    sync::Semaphore,
+    time::{interval, sleep, timeout},
+};
 use tokio_util::sync::CancellationToken;
-use tokio::time::{interval, sleep, timeout};
 
-use crate::Store;
-use crate::actor::StoreHandle;
-use crate::protocol::{Request, Response};
+use crate::{
+    Store,
+    actor::StoreHandle,
+    protocol::{Request, Response},
+};
 
 /// How long a connection may say nothing before it is closed.
 pub const IDLE_LIMIT: Duration = Duration::from_secs(30);
@@ -36,7 +38,10 @@ pub async fn serve(
     let permits = Arc::new(Semaphore::new(max_connections));
 
     loop {
-        let permit = Arc::clone(&permits).acquire_owned().await.expect("never closed");
+        let permit = Arc::clone(&permits)
+            .acquire_owned()
+            .await
+            .expect("never closed");
         let (stream, _) = listener.accept().await?;
         let store = store.clone();
 
@@ -101,21 +106,26 @@ pub fn apply(request: Request, store: &mut Store) -> Response {
 
 #[cfg(test)]
 mod tests {
-    use std::net::SocketAddr;
-    use std::time::Duration;
+    use std::{net::SocketAddr, time::Duration};
 
-    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader, Lines};
-    use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
-    use tokio::net::{TcpListener, TcpStream};
-    use tokio::task::JoinHandle;
-    use tokio::time::timeout;
+    use tokio::{
+        io::{AsyncBufReadExt, AsyncWriteExt, BufReader, Lines},
+        net::{
+            TcpListener, TcpStream,
+            tcp::{OwnedReadHalf, OwnedWriteHalf},
+        },
+        task::JoinHandle,
+        time::timeout,
+    };
     use tokio_util::sync::CancellationToken;
 
-    use crate::Store;
-    use crate::actor::StoreHandle;
-    use crate::server::serve;
+    use crate::{Store, actor::StoreHandle, server::serve};
 
-    type Server = (SocketAddr, CancellationToken, JoinHandle<std::io::Result<()>>);
+    type Server = (
+        SocketAddr,
+        CancellationToken,
+        JoinHandle<std::io::Result<()>>,
+    );
 
     #[tokio::test]
     async fn cancelling_the_token_stops_the_server() {
@@ -144,7 +154,9 @@ mod tests {
         shutdown.cancel();
 
         assert!(
-            timeout(Duration::from_millis(300), &mut server).await.is_err(),
+            timeout(Duration::from_millis(300), &mut server)
+                .await
+                .is_err(),
             "serve returned while a client was still connected"
         );
 

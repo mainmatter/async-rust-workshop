@@ -13,8 +13,8 @@
 //! - **Do not hold the guard across the write.** Take the lock, apply the request, drop the guard,
 //!   then write the response. The client may be slow to read; the store should not care.
 //!
-//! `Store::get` hands out a reference into the map, which cannot outlive the guard, so a read has to
-//! clone the value out. That clone is the price of sharing, and it is the first hint that this
+//! `Store::get` hands out a reference into the map, which cannot outlive the guard, so a read has
+//! to clone the value out. That clone is the price of sharing, and it is the first hint that this
 //! design is not free.
 //!
 //! This is `tokio::sync::Mutex` rather than `std::sync::Mutex`, which is defensible here and worth
@@ -24,8 +24,10 @@
 pub mod protocol;
 pub mod server;
 
-use std::collections::HashMap;
-use std::fmt::{self, Debug, Formatter};
+use std::{
+    collections::HashMap,
+    fmt::{self, Debug, Formatter},
+};
 
 const MAX_NAME_LENGTH: usize = 64;
 const MAX_VALUE_LENGTH: usize = 4096;

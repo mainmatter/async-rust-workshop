@@ -1,8 +1,10 @@
 use std::io;
 
-use backpressure_limits::Store;
-use backpressure_limits::actor::StoreHandle;
-use backpressure_limits::server::{MAX_CONNECTIONS, serve};
+use backpressure_limits::{
+    Store,
+    actor::StoreHandle,
+    server::{MAX_CONNECTIONS, serve},
+};
 use tokio::net::TcpListener;
 
 #[tokio::main]

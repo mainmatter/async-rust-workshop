@@ -1,8 +1,6 @@
 use std::io;
 
-use cancellation_timeout::Store;
-use cancellation_timeout::actor::StoreHandle;
-use cancellation_timeout::server::serve;
+use cancellation_timeout::{Store, actor::StoreHandle, server::serve};
 use tokio::net::TcpListener;
 
 #[tokio::main]

@@ -2,12 +2,16 @@
 
 use std::time::Duration;
 
-use tokio::sync::{mpsc, oneshot};
-use tokio::time::sleep;
+use tokio::{
+    sync::{mpsc, oneshot},
+    time::sleep,
+};
 
-use crate::Store;
-use crate::protocol::{Request, Response};
-use crate::server::apply;
+use crate::{
+    Store,
+    protocol::{Request, Response},
+    server::apply,
+};
 
 /// How many requests may be waiting to be applied.
 pub const MAILBOX: usize = 32;
@@ -42,7 +46,12 @@ impl StoreHandle {
     pub async fn apply(&self, request: Request) -> Response {
         let (reply, answer) = oneshot::channel();
 
-        if self.commands.send(Command { request, reply }).await.is_err() {
+        if self
+            .commands
+            .send(Command { request, reply })
+            .await
+            .is_err()
+        {
             return Response::Error("the store is gone".to_owned());
         }
 

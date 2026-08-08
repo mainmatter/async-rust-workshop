@@ -6,9 +6,9 @@
 //! Give `serve` a limit. `tokio::sync::Semaphore` holds a fixed number of permits: acquire one
 //! before serving a connection, and hold it until that connection is done.
 //!
-//! Where you acquire it decides what the limit means. Acquire before `accept` and the listener stops
-//! taking connections off the kernel's backlog queue, so a client that cannot be served yet waits in
-//! the backlog rather than in your process. That is the version the test expects.
+//! Where you acquire it decides what the limit means. Acquire before `accept` and the listener
+//! stops taking connections off the kernel's backlog queue, so a client that cannot be served yet
+//! waits in the backlog rather than in your process. That is the version the test expects.
 //!
 //! `Semaphore::acquire_owned` gives a permit that can be moved into the connection task, which is
 //! what you want here: the permit's `Drop` releases it, so a connection that ends any way at all,
@@ -18,8 +18,10 @@ pub mod actor;
 pub mod protocol;
 pub mod server;
 
-use std::collections::HashMap;
-use std::fmt::{self, Debug, Formatter};
+use std::{
+    collections::HashMap,
+    fmt::{self, Debug, Formatter},
+};
 
 const MAX_NAME_LENGTH: usize = 64;
 const MAX_VALUE_LENGTH: usize = 4096;

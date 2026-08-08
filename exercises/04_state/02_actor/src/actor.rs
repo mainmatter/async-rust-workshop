@@ -2,8 +2,10 @@
 
 use tokio::sync::{mpsc, oneshot};
 
-use crate::Store;
-use crate::protocol::{Request, Response};
+use crate::{
+    Store,
+    protocol::{Request, Response},
+};
 
 /// A handle to the task that owns the store. Cloning it is how a connection gets access.
 #[derive(Clone)]
@@ -39,9 +41,11 @@ async fn run(store: Store, mut inbox: mpsc::Receiver<Command>) {
 
 #[cfg(test)]
 mod tests {
-    use crate::actor::StoreHandle;
-    use crate::protocol::{Request, Response};
-    use crate::{Bucket, Key, Store, Value};
+    use crate::{
+        Bucket, Key, Store, Value,
+        actor::StoreHandle,
+        protocol::{Request, Response},
+    };
 
     #[tokio::test]
     async fn the_handle_answers() {

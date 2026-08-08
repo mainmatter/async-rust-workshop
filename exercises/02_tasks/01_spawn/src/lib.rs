@@ -14,13 +14,14 @@
 //!
 //! `Arc` is enough here only because nothing writes. Chapter 4 is what happens when something does.
 
-use std::collections::HashMap;
-use std::sync::Arc;
-use std::fmt::{self, Debug, Formatter};
-use std::time::Duration;
+use std::{
+    collections::HashMap,
+    fmt::{self, Debug, Formatter},
+    sync::Arc,
+    time::Duration,
+};
 
-use tokio::task::JoinHandle;
-use tokio::time::sleep;
+use tokio::{task::JoinHandle, time::sleep};
 
 const MAX_NAME_LENGTH: usize = 64;
 const MAX_VALUE_LENGTH: usize = 4096;
@@ -178,8 +179,7 @@ fn is_valid_char(c: char) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
-    use std::time::Duration;
+    use std::{sync::Arc, time::Duration};
 
     use tokio::time::Instant;
 

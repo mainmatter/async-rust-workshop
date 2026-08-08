@@ -10,8 +10,8 @@
 //!
 //! **That independence is what the bounds pay for.** A spawned future must be `Send`, because the
 //! runtime may move it to another thread, and `'static`, because the runtime cannot promise to
-//! finish it before anything you lent it goes away. `spawn_lookup` below therefore takes its `Store`
-//! by value where `slow_get` took it by reference.
+//! finish it before anything you lent it goes away. `spawn_lookup` below therefore takes its
+//! `Store` by value where `slow_get` took it by reference.
 //!
 //! `Send` is a question about await points, not about the call: a value that is not `Send` is fine
 //! inside a spawned future as long as it is gone before the next `.await`. Held across one, it is a
@@ -35,15 +35,16 @@
 //! of the tests below spawns a thousand and does not notice.
 //!
 //! **A task can outlive your interest in it.** `spawn` returns a `JoinHandle`, awaiting it gives a
-//! `Result<T, JoinError>`, and dropping the handle does not stop the task, it only stops you hearing
-//! how it went. Chapter 7 is about what that costs.
+//! `Result<T, JoinError>`, and dropping the handle does not stop the task, it only stops you
+//! hearing how it went. Chapter 7 is about what that costs.
 
-use std::collections::HashMap;
-use std::fmt::{self, Debug, Formatter};
-use std::time::Duration;
+use std::{
+    collections::HashMap,
+    fmt::{self, Debug, Formatter},
+    time::Duration,
+};
 
-use tokio::task::JoinHandle;
-use tokio::time::sleep;
+use tokio::{task::JoinHandle, time::sleep};
 
 const MAX_NAME_LENGTH: usize = 64;
 const MAX_VALUE_LENGTH: usize = 4096;
@@ -196,9 +197,13 @@ fn is_valid_char(c: char) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
-    use std::sync::atomic::{AtomicBool, Ordering};
-    use std::time::Duration;
+    use std::{
+        sync::{
+            Arc,
+            atomic::{AtomicBool, Ordering},
+        },
+        time::Duration,
+    };
 
     use tokio::time::sleep;
 
@@ -236,7 +241,9 @@ mod tests {
 
     #[tokio::test]
     async fn a_thousand_tasks_is_nothing() {
-        let handles = (0..1000).map(|i| tokio::spawn(async move { i })).collect::<Vec<_>>();
+        let handles = (0..1000)
+            .map(|i| tokio::spawn(async move { i }))
+            .collect::<Vec<_>>();
 
         let mut total = 0;
         for handle in handles {

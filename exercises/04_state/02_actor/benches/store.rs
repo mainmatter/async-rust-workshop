@@ -5,12 +5,13 @@
 use std::sync::Arc;
 
 use criterion::{Criterion, criterion_group, criterion_main};
-use state_actor::actor::StoreHandle;
-use state_actor::protocol::{Request, Response};
-use state_actor::server::apply;
-use state_actor::{Bucket, Key, Store, Value};
-use tokio::runtime::Runtime;
-use tokio::sync::Mutex;
+use state_actor::{
+    Bucket, Key, Store, Value,
+    actor::StoreHandle,
+    protocol::{Request, Response},
+    server::apply,
+};
+use tokio::{runtime::Runtime, sync::Mutex};
 
 const TASKS: usize = 64;
 const REQUESTS: usize = 16;

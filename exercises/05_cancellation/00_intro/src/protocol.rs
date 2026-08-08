@@ -7,9 +7,19 @@ use crate::{Bucket, Key, NameError, Value, ValueError};
 /// A request from a client.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Request {
-    Get { bucket: Bucket, key: Key },
-    Set { bucket: Bucket, key: Key, value: Value },
-    Del { bucket: Bucket, key: Key },
+    Get {
+        bucket: Bucket,
+        key: Key,
+    },
+    Set {
+        bucket: Bucket,
+        key: Key,
+        value: Value,
+    },
+    Del {
+        bucket: Bucket,
+        key: Key,
+    },
 }
 
 impl Request {
@@ -130,8 +140,10 @@ impl From<ValueError> for ProtocolError {
 
 #[cfg(test)]
 mod tests {
-    use crate::protocol::{ProtocolError, Request, Response};
-    use crate::{Value, ValueError};
+    use crate::{
+        Value, ValueError,
+        protocol::{ProtocolError, Request, Response},
+    };
 
     #[test]
     fn every_request_survives_the_round_trip() {
@@ -164,7 +176,10 @@ mod tests {
 
     #[test]
     fn a_request_missing_its_key_is_not_a_request() {
-        assert_eq!(Request::parse("GET users"), Err(ProtocolError::MissingArgument));
+        assert_eq!(
+            Request::parse("GET users"),
+            Err(ProtocolError::MissingArgument)
+        );
     }
 
     #[test]

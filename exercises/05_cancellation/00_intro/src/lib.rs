@@ -4,17 +4,17 @@
 //! being slow about the vocabulary.
 //!
 //! **Cancelling a future is dropping it.** There is no signal, no unwind, no handler. Whatever it
-//! was in the middle of simply stops, at the last await point it reached, and everything it owned is
-//! dropped. `with_limit` below is `tokio::time::timeout`, and all `timeout` does when it fires is
-//! drop the future it was given.
+//! was in the middle of simply stops, at the last await point it reached, and everything it owned
+//! is dropped. `with_limit` below is `tokio::time::timeout`, and all `timeout` does when it fires
+//! is drop the future it was given.
 //!
-//! That means cancellation is silent by construction: no code of yours runs to notice it, unless you
-//! put it in a `Drop` impl. Chapter 7 is where that becomes a design problem.
+//! That means cancellation is silent by construction: no code of yours runs to notice it, unless
+//! you put it in a `Drop` impl. Chapter 7 is where that becomes a design problem.
 //!
-//! **Cancellation stops your waiting, not the work.** This is the one that surprises people, and the
-//! last test says it out loud. A request that has already been handed to the store task is going to
-//! be applied whether or not anybody is still listening for the answer. `timeout` gave you back
-//! control; it did not reach into another task and undo anything.
+//! **Cancellation stops your waiting, not the work.** This is the one that surprises people, and
+//! the last test says it out loud. A request that has already been handed to the store task is
+//! going to be applied whether or not anybody is still listening for the answer. `timeout` gave you
+//! back control; it did not reach into another task and undo anything.
 //!
 //! **Cancel safety is a property of an API, not of your code.** A future is cancel safe when
 //! dropping it mid-flight loses nothing. `AsyncBufReadExt::next_line` is: the bytes it has read so
@@ -24,20 +24,25 @@
 //! tell by looking at the type. Exercise 02 is that difference, in the debugger rather than in the
 //! abstract.
 //!
-//! **One refactor comes with this chapter.** `handle_connection` no longer insists on a `TcpStream`:
-//! it takes anything that can be read and written, and splits it with `tokio::io::split`. That is
-//! how the next exercise can drive it from a test with an in-memory pipe and control exactly when
-//! each byte arrives, and it is how chapter 8 tests the whole server without a socket.
+//! **One refactor comes with this chapter.** `handle_connection` no longer insists on a
+//! `TcpStream`: it takes anything that can be read and written, and splits it with
+//! `tokio::io::split`. That is how the next exercise can drive it from a test with an in-memory
+//! pipe and control exactly when each byte arrives, and it is how chapter 8 tests the whole server
+//! without a socket.
 
 pub mod actor;
 pub mod protocol;
 pub mod server;
 
-use std::collections::HashMap;
-use std::fmt::{self, Debug, Formatter};
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::Duration;
+use std::{
+    collections::HashMap,
+    fmt::{self, Debug, Formatter},
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
+    time::Duration,
+};
 
 use tokio::time::{sleep, timeout};
 
@@ -195,16 +200,22 @@ pub async fn slow_work(took: Duration, finished: Arc<AtomicBool>) {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
-    use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
-    use std::time::Duration;
+    use std::{
+        sync::{
+            Arc,
+            atomic::{AtomicBool, AtomicU32, Ordering},
+        },
+        time::Duration,
+    };
 
-    use tokio::task::yield_now;
-    use tokio::time::sleep;
+    use tokio::{task::yield_now, time::sleep};
 
-    use crate::actor::StoreHandle;
-    use crate::protocol::{Request, Response};
-    use crate::{Bucket, Key, Store, Value, slow_work, with_limit};
+    use crate::{
+        Bucket, Key, Store, Value,
+        actor::StoreHandle,
+        protocol::{Request, Response},
+        slow_work, with_limit,
+    };
 
     #[tokio::test(start_paused = true)]
     async fn a_timeout_drops_the_work_it_was_given() {

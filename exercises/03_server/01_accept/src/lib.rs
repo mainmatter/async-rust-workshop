@@ -5,10 +5,10 @@
 //!
 //! Implement the two functions in `server.rs`:
 //!
-//! - `handle_connection` reads one line at a time from the client, parses it, applies it, and writes
-//!   the response back with a trailing newline. When the client goes away, `next_line` returns
-//!   `Ok(None)` and the connection is over. A request that does not parse is answered with `ERR`,
-//!   not by hanging up: one bad line is not a reason to drop a connection.
+//! - `handle_connection` reads one line at a time from the client, parses it, applies it, and
+//!   writes the response back with a trailing newline. When the client goes away, `next_line`
+//!   returns `Ok(None)` and the connection is over. A request that does not parse is answered with
+//!   `ERR`, not by hanging up: one bad line is not a reason to drop a connection.
 //! - `serve` accepts connections from the listener and hands each one to `handle_connection`.
 //!
 //! Split the socket with `TcpStream::into_split` and wrap the reading half in a `BufReader` to get
@@ -22,8 +22,10 @@
 pub mod protocol;
 pub mod server;
 
-use std::collections::HashMap;
-use std::fmt::{self, Debug, Formatter};
+use std::{
+    collections::HashMap,
+    fmt::{self, Debug, Formatter},
+};
 
 const MAX_NAME_LENGTH: usize = 64;
 const MAX_VALUE_LENGTH: usize = 4096;

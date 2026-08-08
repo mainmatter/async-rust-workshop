@@ -1,8 +1,9 @@
-use std::env;
-use std::io;
+use std::{env, io};
 
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader, stdin};
-use tokio::net::TcpStream;
+use tokio::{
+    io::{AsyncBufReadExt, AsyncWriteExt, BufReader, stdin},
+    net::TcpStream,
+};
 
 #[tokio::main]
 async fn main() -> io::Result<()> {

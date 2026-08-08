@@ -1,8 +1,6 @@
 use std::io;
 
-use cancellation_cancel_safe::Store;
-use cancellation_cancel_safe::actor::StoreHandle;
-use cancellation_cancel_safe::server::serve;
+use cancellation_cancel_safe::{Store, actor::StoreHandle, server::serve};
 use tokio::net::TcpListener;
 
 #[tokio::main]

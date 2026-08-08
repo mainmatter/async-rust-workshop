@@ -2,12 +2,16 @@
 
 use std::time::Duration;
 
-use tokio::sync::{mpsc, oneshot};
-use tokio::time::sleep;
+use tokio::{
+    sync::{mpsc, oneshot},
+    time::sleep,
+};
 
-use crate::Store;
-use crate::protocol::{Request, Response};
-use crate::server::apply;
+use crate::{
+    Store,
+    protocol::{Request, Response},
+    server::apply,
+};
 
 /// How many requests may be waiting to be applied.
 pub const MAILBOX: usize = 32;
@@ -59,7 +63,12 @@ impl StoreHandle {
     pub async fn apply(&self, request: Request) -> Response {
         let (reply, answer) = oneshot::channel();
 
-        if self.commands.send(Command { request, reply }).await.is_err() {
+        if self
+            .commands
+            .send(Command { request, reply })
+            .await
+            .is_err()
+        {
             return Response::Error("the store is gone".to_owned());
         }
 
@@ -87,18 +96,22 @@ async fn run(mut store: Store, mut inbox: mpsc::Receiver<Command>, delay: Durati
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
-    use std::sync::atomic::{AtomicU32, Ordering};
-    use std::time::Duration;
+    use std::{
+        sync::{
+            Arc,
+            atomic::{AtomicU32, Ordering},
+        },
+        time::Duration,
+    };
 
     use tokio::time::{sleep, timeout};
-    use tokio_util::sync::CancellationToken;
-    use tokio_util::task::TaskTracker;
+    use tokio_util::{sync::CancellationToken, task::TaskTracker};
 
-    use crate::Store;
-    use crate::actor::StoreHandle;
-    use crate::protocol::{Request, Response};
-    use crate::{Bucket, Key};
+    use crate::{
+        Bucket, Key, Store,
+        actor::StoreHandle,
+        protocol::{Request, Response},
+    };
 
     #[tokio::test(start_paused = true)]
     async fn a_token_is_how_you_ask_a_task_to_stop() {

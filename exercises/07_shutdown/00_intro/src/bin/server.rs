@@ -1,8 +1,10 @@
 use std::io;
 
-use shutdown_intro::Store;
-use shutdown_intro::actor::StoreHandle;
-use shutdown_intro::server::{MAX_CONNECTIONS, serve};
+use shutdown_intro::{
+    Store,
+    actor::StoreHandle,
+    server::{MAX_CONNECTIONS, serve},
+};
 use tokio::net::TcpListener;
 
 #[tokio::main]

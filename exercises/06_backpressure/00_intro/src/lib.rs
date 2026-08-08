@@ -12,10 +12,10 @@
 //! and is occasionally right, and it should always be a decision rather than a default.
 //!
 //! **A bounded queue makes the sender wait**, which is what `mpsc::channel(capacity)` does, and it
-//! is the default in `minidb` because it is the honest one. `Sender::send` is an `async fn`: when the
-//! mailbox is full it does not return until there is room. That wait is backpressure, and it travels:
-//! the connection task stops reading its socket, the client's writes stop completing, and the
-//! pressure ends up where it belongs, at the source.
+//! is the default in `minidb` because it is the honest one. `Sender::send` is an `async fn`: when
+//! the mailbox is full it does not return until there is room. That wait is backpressure, and it
+//! travels: the connection task stops reading its socket, the client's writes stop completing, and
+//! the pressure ends up where it belongs, at the source.
 //!
 //! The first test measures exactly that. A store that takes 100ms per request and a mailbox with
 //! room for one means the third request is waiting on the queue before it waits on the store.
@@ -27,8 +27,10 @@ pub mod actor;
 pub mod protocol;
 pub mod server;
 
-use std::collections::HashMap;
-use std::fmt::{self, Debug, Formatter};
+use std::{
+    collections::HashMap,
+    fmt::{self, Debug, Formatter},
+};
 
 const MAX_NAME_LENGTH: usize = 64;
 const MAX_VALUE_LENGTH: usize = 4096;

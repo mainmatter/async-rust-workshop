@@ -4,8 +4,10 @@ use std::io;
 
 use tokio::net::{TcpListener, TcpStream};
 
-use crate::Store;
-use crate::protocol::{Request, Response};
+use crate::{
+    Store,
+    protocol::{Request, Response},
+};
 
 /// Serves clients, one at a time, until the listener gives up.
 pub async fn serve(listener: TcpListener, store: Store) -> io::Result<()> {
@@ -41,12 +43,15 @@ pub fn apply(request: Request, store: &mut Store) -> Response {
 mod tests {
     use std::net::SocketAddr;
 
-    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader, Lines};
-    use tokio::net::TcpStream;
-    use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
+    use tokio::{
+        io::{AsyncBufReadExt, AsyncWriteExt, BufReader, Lines},
+        net::{
+            TcpStream,
+            tcp::{OwnedReadHalf, OwnedWriteHalf},
+        },
+    };
 
-    use crate::Store;
-    use crate::server::serve;
+    use crate::{Store, server::serve};
 
     #[tokio::test]
     async fn a_value_written_can_be_read_back() {

@@ -1,15 +1,18 @@
 //! The socket half of `minidb`.
 
-use std::io;
-use std::time::Duration;
+use std::{io, time::Duration};
 
-use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncWrite, AsyncWriteExt, BufReader};
-use tokio::net::TcpListener;
-use tokio::time::{interval, sleep};
+use tokio::{
+    io::{AsyncBufReadExt, AsyncRead, AsyncWrite, AsyncWriteExt, BufReader},
+    net::TcpListener,
+    time::{interval, sleep},
+};
 
-use crate::Store;
-use crate::actor::StoreHandle;
-use crate::protocol::{Request, Response};
+use crate::{
+    Store,
+    actor::StoreHandle,
+    protocol::{Request, Response},
+};
 
 /// How long a connection may say nothing before it is closed.
 pub const IDLE_LIMIT: Duration = Duration::from_secs(30);
@@ -105,15 +108,17 @@ pub fn apply(request: Request, store: &mut Store) -> Response {
 mod tests {
     use std::time::Duration;
 
-    use tokio::io::{
-        AsyncBufReadExt, AsyncWriteExt, BufReader, DuplexStream, Lines, ReadHalf, WriteHalf,
+    use tokio::{
+        io::{AsyncBufReadExt, AsyncWriteExt, BufReader, DuplexStream, Lines, ReadHalf, WriteHalf},
+        task::yield_now,
+        time::{advance, timeout},
     };
-    use tokio::task::yield_now;
-    use tokio::time::{advance, timeout};
 
-    use crate::Store;
-    use crate::actor::StoreHandle;
-    use crate::server::{TICK, handle_connection};
+    use crate::{
+        Store,
+        actor::StoreHandle,
+        server::{TICK, handle_connection},
+    };
 
     const IDLE: Duration = Duration::from_secs(30);
 

@@ -6,8 +6,8 @@
 //! that is the whole runtime stopped. On a multi-thread one it is a worker thread gone, and there
 //! are only as many of those as you have cores.
 //!
-//! `checksum` is that kind of code. It touches no I/O, it just computes, and it holds the thread for
-//! as long as it takes.
+//! `checksum` is that kind of code. It touches no I/O, it just computes, and it holds the thread
+//! for as long as it takes.
 //!
 //! Implement `checksum_async` so it returns the same number without stopping the runtime. The tool
 //! is `tokio::task::spawn_blocking`, which hands the closure to a separate pool that is allowed to
@@ -21,13 +21,14 @@
 //! and does not await belongs on the blocking pool. That includes the obvious CPU work, and also
 //! `std::fs`, `std::net`, and any C library that talks to a disk.
 
-use std::collections::HashMap;
-use std::sync::Arc;
-use std::fmt::{self, Debug, Formatter};
-use std::time::Duration;
+use std::{
+    collections::HashMap,
+    fmt::{self, Debug, Formatter},
+    sync::Arc,
+    time::Duration,
+};
 
-use tokio::task::JoinHandle;
-use tokio::time::sleep;
+use tokio::{task::JoinHandle, time::sleep};
 
 const MAX_NAME_LENGTH: usize = 64;
 const ROUNDS: u32 = 200_000;
@@ -200,8 +201,10 @@ fn is_valid_char(c: char) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
-    use std::sync::atomic::{AtomicU32, Ordering};
+    use std::sync::{
+        Arc,
+        atomic::{AtomicU32, Ordering},
+    };
 
     use tokio::task::yield_now;
 
