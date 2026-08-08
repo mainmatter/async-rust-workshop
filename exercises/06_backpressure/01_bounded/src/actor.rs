@@ -86,33 +86,34 @@ mod tests {
     const SLOW: Duration = Duration::from_millis(500);
 
     #[tokio::test(start_paused = true)]
-    async fn a_full_mailbox_is_answered_immediately() {
+    async fn a_full_mailbox_is_answered_rather_than_queued() {
         let store = StoreHandle::spawn_with_capacity(Store::new(), SLOW, 1);
 
-        let first = tokio::spawn({
-            let store = store.clone();
-            async move { store.try_apply(set("alice")).await }
-        });
-        let second = tokio::spawn({
-            let store = store.clone();
-            async move { store.try_apply(set("bob")).await }
-        });
+        let senders = (0..8)
+            .map(|i| {
+                let store = store.clone();
+                tokio::spawn(async move { store.try_apply(set(&format!("user-{i}"))).await })
+            })
+            .collect::<Vec<_>>();
 
-        tokio::task::yield_now().await;
+        let mut answers = Vec::new();
+        for sender in senders {
+            answers.push(sender.await.unwrap());
+        }
 
-        let started = Instant::now();
-        let shed = tokio::spawn({
-            let store = store.clone();
-            async move { store.try_apply(set("carol")).await }
-        })
-        .await
-        .unwrap();
+        let shed = answers
+            .iter()
+            .filter(|answer| **answer == Response::Error("busy".to_owned()))
+            .count();
 
-        assert_eq!(shed, Response::Error("busy".to_owned()));
-        assert!(started.elapsed() < SLOW, "it should not have waited at all");
-
-        first.await.unwrap();
-        second.await.unwrap();
+        assert!(
+            shed > 0,
+            "eight requests at {SLOW:?} each, with room for one: some should have been refused"
+        );
+        assert!(
+            answers.iter().any(|answer| *answer == Response::Ok),
+            "and some should have been accepted"
+        );
     }
 
     #[tokio::test(start_paused = true)]

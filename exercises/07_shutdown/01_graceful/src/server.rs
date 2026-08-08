@@ -169,13 +169,20 @@ mod tests {
             .unwrap()
             .unwrap();
 
-        let mut late = TestClient::connect(addr).await;
-        assert!(
-            timeout(Duration::from_millis(300), late.request("GET users alice"))
-                .await
-                .is_err(),
-            "the server is gone and cannot answer"
-        );
+        let served = match TcpStream::connect(addr).await {
+            Err(_) => false,
+            Ok(stream) => {
+                let (reader, mut writer) = stream.into_split();
+                let mut lines = BufReader::new(reader).lines();
+
+                writer.write_all(b"GET users alice\n").await.is_ok()
+                    && timeout(Duration::from_millis(300), lines.next_line())
+                        .await
+                        .is_ok_and(|line| matches!(line, Ok(Some(_))))
+            }
+        };
+
+        assert!(!served, "the server answered after it had shut down");
     }
 
     struct TestClient {
