@@ -1,0 +1,164 @@
+//! # Exercise
+//!
+//! `minidb` gets a socket. The protocol is done, `apply` in `server.rs` already turns a `Request`
+//! into a `Response`, and what is missing is the I/O around it.
+//!
+//! Implement the two functions in `server.rs`:
+//!
+//! - `handle_connection` reads one line at a time from the client, parses it, applies it, and writes
+//!   the response back with a trailing newline. When the client goes away, `next_line` returns
+//!   `Ok(None)` and the connection is over. A request that does not parse is answered with `ERR`,
+//!   not by hanging up: one bad line is not a reason to drop a connection.
+//! - `serve` accepts connections from the listener and hands each one to `handle_connection`.
+//!
+//! Split the socket with `TcpStream::into_split` and wrap the reading half in a `BufReader` to get
+//! `next_line`. Writing is `write_all`, and the newline is yours to add.
+//!
+//! One client at a time is enough for this exercise. The next one is about what that costs.
+//!
+//! You can also run it: `cargo run` starts the server on port 7878 and `cargo run --bin client`
+//! opens a client against it, one line per request. `nc localhost 7878` does just as well.
+
+pub mod protocol;
+pub mod server;
+
+use std::collections::HashMap;
+use std::fmt::{self, Debug, Formatter};
+
+const MAX_NAME_LENGTH: usize = 64;
+const MAX_VALUE_LENGTH: usize = 4096;
+
+/// An in-memory key-value store, partitioned into named buckets.
+pub struct Store {
+    buckets: HashMap<Bucket, HashMap<Key, Value>>,
+}
+
+impl Store {
+    /// Creates an empty store.
+    pub fn new() -> Self {
+        Self {
+            buckets: HashMap::new(),
+        }
+    }
+
+    /// Inserts a value, returning the value it replaced, if any.
+    pub fn insert(&mut self, bucket: Bucket, key: Key, value: Value) -> Option<Value> {
+        self.buckets.entry(bucket).or_default().insert(key, value)
+    }
+
+    /// Looks up a value.
+    pub fn get(&self, bucket: &Bucket, key: &Key) -> Option<&Value> {
+        self.buckets.get(bucket)?.get(key)
+    }
+
+    /// Removes a value, returning it if it was there.
+    pub fn remove(&mut self, bucket: &Bucket, key: &Key) -> Option<Value> {
+        self.buckets.get_mut(bucket)?.remove(key)
+    }
+
+    /// Lists the buckets, including any that have been emptied.
+    pub fn buckets(&self) -> impl Iterator<Item = &Bucket> {
+        self.buckets.keys()
+    }
+}
+
+impl Default for Store {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// The name of a bucket.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Bucket(String);
+
+impl Bucket {
+    /// Parses a bucket name, rejecting anything `minidb` cannot store.
+    pub fn parse(raw: &str) -> Result<Self, NameError> {
+        parse_name(raw).map(Self)
+    }
+
+    /// Borrows the bucket name.
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+/// The name of a value within a bucket.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Key(String);
+
+impl Key {
+    /// Parses a key, rejecting anything `minidb` cannot store.
+    pub fn parse(raw: &str) -> Result<Self, NameError> {
+        parse_name(raw).map(Self)
+    }
+
+    /// Borrows the key.
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+/// A value held in the store.
+#[derive(Clone, PartialEq, Eq)]
+pub struct Value(String);
+
+impl Value {
+    /// Parses a value, rejecting anything that could not survive a round trip over the wire.
+    pub fn parse(raw: &str) -> Result<Self, ValueError> {
+        if raw.len() > MAX_VALUE_LENGTH {
+            return Err(ValueError::TooLong { length: raw.len() });
+        }
+
+        match raw.char_indices().find(|(_, c)| matches!(c, '\n' | '\r')) {
+            Some((index, _)) => Err(ValueError::Newline { index }),
+            None => Ok(Self(raw.to_owned())),
+        }
+    }
+
+    /// Borrows the value.
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl Debug for Value {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "Value(<redacted, {} bytes>)", self.0.len())
+    }
+}
+
+/// What can go wrong when parsing a bucket name or a key.
+#[derive(Debug, PartialEq, Eq)]
+pub enum NameError {
+    Empty,
+    TooLong { length: usize },
+    InvalidCharacter { character: char, index: usize },
+}
+
+/// What can go wrong when parsing a value.
+#[derive(Debug, PartialEq, Eq)]
+pub enum ValueError {
+    TooLong { length: usize },
+    Newline { index: usize },
+}
+
+fn parse_name(raw: &str) -> Result<String, NameError> {
+    if raw.is_empty() {
+        return Err(NameError::Empty);
+    }
+
+    if raw.len() > MAX_NAME_LENGTH {
+        return Err(NameError::TooLong { length: raw.len() });
+    }
+
+    match raw.char_indices().find(|(_, c)| !is_valid_char(*c)) {
+        Some((index, character)) => Err(NameError::InvalidCharacter { character, index }),
+        None => Ok(raw.to_owned()),
+    }
+}
+
+fn is_valid_char(c: char) -> bool {
+    c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.' | '/')
+}

@@ -1,0 +1,8 @@
+[package]
+name = "intro_welcome"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+tokio = { workspace = true, features = ["macros", "rt"] }
