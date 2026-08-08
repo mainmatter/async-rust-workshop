@@ -1,0 +1,71 @@
+name: "Site"
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+  schedule:
+    # First day of a month
+    - cron: '0 0 1 * *'
+
+permissions:
+  contents: read
+
+# A single in-flight deployment, without cancelling one that is already running.
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - name: Install plugin
+        run: cargo install --git https://github.com/mainmatter/mdbook-exercise-linker
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: mdbook
+      - name: Build book
+        run: |
+          cd book
+          mdbook build
+      - name: Link Checker
+        uses: lycheeverse/lychee-action@v2
+        with:
+          fail: true
+          args: |
+            --exclude-loopback
+            --require-https
+            --no-progress
+            --exclude-path book/book/fonts
+            --exclude-path book/book/404.html
+            book/book
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: book/book
+
+  deploy:
+    needs: build
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
+
+  formatter:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dprint/check@v2.2

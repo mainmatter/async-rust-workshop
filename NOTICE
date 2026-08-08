@@ -1,0 +1,8 @@
+Advanced Rust workshop
+Copyright 2026 Mainmatter GmbH
+
+The structure of this workshop's curriculum was informed by the "Idiomatic Rust" chapter of
+Comprehensive Rust (https://google.github.io/comprehensive-rust/), Copyright Google LLC, whose prose is
+licensed under CC-BY-4.0 and whose code samples are licensed under Apache-2.0.
+
+All prose, code and exercises in this repository were written from scratch by Mainmatter.
