@@ -27,10 +27,12 @@ store task is still going to apply it. The client is told `ERR busy`, and the wr
 a moment later, with nobody listening.
 
 The exercise ships a test that asserts exactly this, because it is the sort of thing that is obvious
-once stated and invisible otherwise:
+once stated and invisible otherwise. It asks the store directly, since asking down the connection
+would time out as well:
 
 ```rust
-// the client was told "busy", and the value is in the store regardless
+assert_eq!(client.request("SET users alice hello").await, "ERR busy");
+assert_eq!(store.apply(get()).await, Response::Value(..));
 ```
 
 This is not a flaw in `timeout`. It is what cancellation means when the work is happening somewhere

@@ -99,8 +99,9 @@ mod tests {
     };
 
     use crate::{
-        Store,
+        Bucket, Key, Store, Value,
         actor::StoreHandle,
+        protocol::{Request, Response},
         server::{REQUEST_LIMIT, handle_connection},
     };
 
@@ -108,7 +109,7 @@ mod tests {
 
     #[tokio::test(start_paused = true)]
     async fn a_store_that_answers_in_time_is_left_alone() {
-        let mut client = connect(Duration::ZERO);
+        let (mut client, _store) = connect(Duration::ZERO);
 
         assert_eq!(client.request("SET users alice hello").await, "OK");
         assert_eq!(client.request("GET users alice").await, "VALUE hello");
@@ -116,27 +117,21 @@ mod tests {
 
     #[tokio::test(start_paused = true)]
     async fn a_store_that_does_not_gets_an_error() {
-        let mut client = connect(REQUEST_LIMIT * 4);
+        let (mut client, _store) = connect(REQUEST_LIMIT * 4);
 
         assert_eq!(client.request("SET users alice hello").await, "ERR busy");
     }
 
     #[tokio::test(start_paused = true)]
     async fn but_the_work_was_done_anyway() {
-        let mut client = connect(REQUEST_LIMIT * 4);
+        let (mut client, store) = connect(REQUEST_LIMIT * 4);
 
         assert_eq!(client.request("SET users alice hello").await, "ERR busy");
 
         assert_eq!(
-            client.request("GET users alice").await,
-            "ERR busy",
-            "the read is slow too, so it times out as well"
-        );
-
-        assert_eq!(
-            client.request("GET users alice").await,
-            "ERR busy",
-            "and the store is still working through the queue"
+            store.apply(get()).await,
+            Response::Value(Value::parse("hello").unwrap()),
+            "the client was told the write failed, and the store applied it regardless"
         );
     }
 
@@ -164,17 +159,29 @@ mod tests {
         }
     }
 
-    fn connect(delay: Duration) -> TestClient {
+    fn connect(delay: Duration) -> (TestClient, StoreHandle) {
         let (client, server) = tokio::io::duplex(1024);
         let store = StoreHandle::spawn_slow(Store::new(), delay);
 
-        tokio::spawn(async move { handle_connection(server, &store, IDLE).await });
+        tokio::spawn({
+            let store = store.clone();
+            async move { handle_connection(server, &store, IDLE).await }
+        });
 
         let (reader, writer) = tokio::io::split(client);
 
-        TestClient {
+        let client = TestClient {
             lines: BufReader::new(reader).lines(),
             writer,
+        };
+
+        (client, store)
+    }
+
+    fn get() -> Request {
+        Request::Get {
+            bucket: Bucket::parse("users").unwrap(),
+            key: Key::parse("alice").unwrap(),
         }
     }
 }
