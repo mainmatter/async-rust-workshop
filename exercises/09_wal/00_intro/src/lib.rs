@@ -1,25 +1,38 @@
-//! # Exercise
+//! # Chapter 9: surviving a restart
 //!
-//! Waiting for a full mailbox is the right default, and it is the wrong answer for a request that
-//! has a deadline anyway. `REQUEST_LIMIT` says two seconds; if the queue is already full of work
-//! that will take longer than that, the client would be better off being told now.
+//! There is nothing to write in this exercise. Read `src/wal.rs`, run `wr`, and it passes.
 //!
-//! Add `StoreHandle::try_apply`, which does what `apply` does except that it gives up immediately
-//! when the mailbox is full, and use it in `handle_connection`.
+//! `minidb` keeps everything in a `HashMap`, so a restart loses the lot. The fix is the oldest one
+//! in databases: before you change anything, write down what you are about to do, somewhere that
+//! outlives the process. That is a **write-ahead log**, and the two words are the whole idea. Write
+//! it _ahead_ of the change, because a log written afterwards is a log that is missing exactly the
+//! records you needed.
 //!
-//! `mpsc::Sender::try_send` is the tool: it returns `Err(TrySendError::Full)` rather than waiting.
-//! Answer that with `ERR busy`, the same string the timeout uses, because from the client's side it
-//! is the same thing: the store is not keeping up. Its other error, `TrySendError::Closed`, means
-//! something else entirely and deserves the answer `apply` already gives it, because a full mailbox
-//! drains and a dead store task does not.
+//! The format is free: `minidb` already has one. Every mutating request is a line of the wire
+//! protocol, so the log is a transcript of what clients asked for, and replaying it is running
+//! those requests again in order. `Request` implements both `parse` and `Display`, so the log
+//! writer and the log reader already exist.
 //!
-//! This is load shedding, and the trade is worth saying out loud. Shedding early keeps latency
-//! bounded for the requests you do accept, and it turns a queue that would have absorbed a burst
-//! into an error the client can see. A store that only ever sheds is a store that is too small.
+//! **`write_all` is not durability.** It hands your bytes to the operating system, which puts them
+//! in a cache and tells you it is done. A process crash is survivable at that point; a power cut is
+//! not. `sync_all` is the call that waits for the disk, and it is expensive, which is why the next
+//! exercises are about when to make it rather than whether to.
+//!
+//! **Tokio's file I/O is not async.** There is no portable way to await a disk, so `tokio::fs`
+//! wraps the blocking calls in `spawn_blocking`. Every `append` costs a trip to the blocking pool,
+//! which is another reason to do more per trip. It also means `write_all` returns before the write
+//! has been attempted, so a disk that refuses it says nothing until the buffer is flushed. The last
+//! test is where that shows up.
+//!
+//! The rest of the chapter: write the record before applying the change, batch the syncs so a busy
+//! server does not sync once per request, and replay the log on startup so the restart is invisible
+//! to whoever reconnects.
 
 pub mod actor;
 pub mod protocol;
+pub mod retry;
 pub mod server;
+pub mod wal;
 
 use std::{
     collections::HashMap,

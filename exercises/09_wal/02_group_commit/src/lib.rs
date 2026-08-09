@@ -1,25 +1,29 @@
 //! # Exercise
 //!
-//! Waiting for a full mailbox is the right default, and it is the wrong answer for a request that
-//! has a deadline anyway. `REQUEST_LIMIT` says two seconds; if the queue is already full of work
-//! that will take longer than that, the client would be better off being told now.
+//! One sync per request is correct and slow. A sync is a round trip to a physical device, and
+//! `tokio::fs` runs it on the blocking pool, so a hundred requests a second is a hundred trips to
+//! the disk and a hundred trips to the pool, whether or not those requests arrived together.
 //!
-//! Add `StoreHandle::try_apply`, which does what `apply` does except that it gives up immediately
-//! when the mailbox is full, and use it in `handle_connection`.
+//! They usually did arrive together. `run` now takes the whole mailbox at once with
+//! `Receiver::recv_many`, so a burst becomes one `Vec<Command>` rather than thirty-two turns of the
+//! loop. Write `commit` in `src/actor.rs`: append every change in the batch, then sync **once**.
 //!
-//! `mpsc::Sender::try_send` is the tool: it returns `Err(TrySendError::Full)` rather than waiting.
-//! Answer that with `ERR busy`, the same string the timeout uses, because from the client's side it
-//! is the same thing: the store is not keeping up. Its other error, `TrySendError::Closed`, means
-//! something else entirely and deserves the answer `apply` already gives it, because a full mailbox
-//! drains and a dead store task does not.
+//! The correctness argument for doing this is worth understanding, because it is not "syncing less
+//! is fine". Durability is only promised to a client that has been answered, and nothing in the
+//! batch is answered until the sync returns. Sixteen clients wait a little longer than the first
+//! one would have, and every one of them gets the same promise as before.
 //!
-//! This is load shedding, and the trade is worth saying out loud. Shedding early keeps latency
-//! bounded for the requests you do accept, and it turns a queue that would have absorbed a burst
-//! into an error the client can see. A store that only ever sheds is a store that is too small.
+//! This is **group commit**, and every database you have used does it. The lesson generalises well
+//! past disks: when work has a fixed cost per trip, the thing to batch is the trip.
+//!
+//! The test spawns sixteen requests at once and counts the syncs. A solution that appends and syncs
+//! each record in turn writes the right bytes and fails the count, which is the point.
 
 pub mod actor;
 pub mod protocol;
+pub mod retry;
 pub mod server;
+pub mod wal;
 
 use std::{
     collections::HashMap,

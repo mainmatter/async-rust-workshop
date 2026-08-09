@@ -1,25 +1,32 @@
 //! # Exercise
 //!
-//! Waiting for a full mailbox is the right default, and it is the wrong answer for a request that
-//! has a deadline anyway. `REQUEST_LIMIT` says two seconds; if the queue is already full of work
-//! that will take longer than that, the client would be better off being told now.
+//! The store task now owns a `Wal` as well as the `Store`, and `run` already calls `log` before it
+//! applies anything and refuses the request if that call fails. Write `log` in `src/actor.rs`.
 //!
-//! Add `StoreHandle::try_apply`, which does what `apply` does except that it gives up immediately
-//! when the mailbox is full, and use it in `handle_connection`.
+//! Two decisions are yours:
 //!
-//! `mpsc::Sender::try_send` is the tool: it returns `Err(TrySendError::Full)` rather than waiting.
-//! Answer that with `ERR busy`, the same string the timeout uses, because from the client's side it
-//! is the same thing: the store is not keeping up. Its other error, `TrySendError::Closed`, means
-//! something else entirely and deserves the answer `apply` already gives it, because a full mailbox
-//! drains and a dead store task does not.
+//! **What gets logged.** A `GET` changes nothing, so writing it down would cost a disk sync to
+//! record that nothing happened. `SET` and `DEL` are the log.
 //!
-//! This is load shedding, and the trade is worth saying out loud. Shedding early keeps latency
-//! bounded for the requests you do accept, and it turns a queue that would have absorbed a burst
-//! into an error the client can see. A store that only ever sheds is a store that is too small.
+//! **When it is safe to say yes.** `append` hands the bytes to a buffer, so a reply sent after the
+//! append and before the sync is a promise you have not kept. The test with the read-only log is
+//! the one that catches this: it checks that a change nobody could write down did not happen
+//! either.
+//!
+//! That ordering is the whole idea, and it is worth stating in the other direction too. The log may
+//! contain changes the store never applied, because the process can die between the sync and the
+//! apply. That is fine: replaying a change that already happened sets the same key to the same
+//! value. The reverse, a store that is ahead of its log, is data loss, and no amount of replaying
+//! fixes it.
+//!
+//! One sync per request is also the slowest thing this server does, and the next exercise is about
+//! that.
 
 pub mod actor;
 pub mod protocol;
+pub mod retry;
 pub mod server;
+pub mod wal;
 
 use std::{
     collections::HashMap,

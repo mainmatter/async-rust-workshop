@@ -9,6 +9,7 @@ use tokio::{
     time::{Instant, interval, sleep, timeout},
 };
 use tokio_util::{sync::CancellationToken, task::TaskTracker};
+use tracing::{info, instrument, warn};
 
 use crate::{
     Store,
@@ -66,6 +67,7 @@ pub async fn serve(
 }
 
 /// Talks to one client until it goes away or stops saying anything.
+#[instrument(name = "connection", skip_all)]
 pub async fn handle_connection<S>(stream: S, store: &StoreHandle, idle: Duration) -> io::Result<()>
 where
     S: AsyncRead + AsyncWrite,
@@ -95,8 +97,13 @@ where
                 Ok(response) => response,
                 Err(_) => Response::Error("busy".to_owned()),
             },
-            Err(error) => Response::Error(error.to_string()),
+            Err(error) => {
+                warn!(%error, "refused");
+                Response::Error(error.to_string())
+            }
         };
+
+        info!(request = %line, response = %response, "handled");
 
         writer.write_all(format!("{response}\n").as_bytes()).await?;
     }
@@ -126,6 +133,7 @@ pub fn apply(request: Request, store: &mut Store) -> Response {
 mod tests {
     use std::{net::SocketAddr, time::Duration};
 
+    use tempfile::tempdir;
     use tokio::{
         io::{AsyncBufReadExt, AsyncWriteExt, BufReader, Lines},
         net::{
@@ -137,7 +145,12 @@ mod tests {
     };
     use tokio_util::sync::CancellationToken;
 
-    use crate::{Store, actor::StoreHandle, server::serve};
+    use crate::{
+        Store,
+        actor::StoreHandle,
+        server::serve,
+        wal::{PATH, Wal},
+    };
 
     #[tokio::test]
     async fn a_dead_store_takes_the_server_with_it() {
@@ -159,7 +172,10 @@ mod tests {
 
     #[tokio::test]
     async fn a_healthy_store_keeps_the_server_up() {
-        let (addr, shutdown, mut server) = spawn_server(StoreHandle::spawn(Store::new())).await;
+        let directory = tempdir().unwrap();
+        let wal = Wal::open(&directory.path().join(PATH)).await.unwrap();
+        let (addr, shutdown, mut server) =
+            spawn_server(StoreHandle::spawn(Store::new(), wal)).await;
 
         let mut client = TestClient::connect(addr).await;
         assert_eq!(client.request("SET users alice hello").await, "OK");

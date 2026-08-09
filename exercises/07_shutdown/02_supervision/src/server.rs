@@ -90,7 +90,7 @@ where
         idle_deadline.as_mut().reset(Instant::now() + idle);
 
         let response = match Request::parse(&line) {
-            Ok(request) => match timeout(REQUEST_LIMIT, store.apply(request)).await {
+            Ok(request) => match timeout(REQUEST_LIMIT, store.try_apply(request)).await {
                 Ok(response) => response,
                 Err(_) => Response::Error("busy".to_owned()),
             },

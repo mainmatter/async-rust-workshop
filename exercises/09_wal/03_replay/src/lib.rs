@@ -1,25 +1,42 @@
 //! # Exercise
 //!
-//! Waiting for a full mailbox is the right default, and it is the wrong answer for a request that
-//! has a deadline anyway. `REQUEST_LIMIT` says two seconds; if the queue is already full of work
-//! that will take longer than that, the client would be better off being told now.
+//! The log has been correct since the first exercise of this chapter and has never once been read.
+//! Write `Wal::replay` in `src/wal.rs`, and the day is done: `minidb` comes back up with everything
+//! it had when it went down.
 //!
-//! Add `StoreHandle::try_apply`, which does what `apply` does except that it gives up immediately
-//! when the mailbox is full, and use it in `handle_connection`.
+//! Replaying is running the requests again. Open the file, read it a line at a time with
+//! `BufReader::lines`, `Request::parse` each line, and hand it to `apply` with a fresh `Store`. The
+//! log was written by `Display` and is read back by `parse`, which is the round trip
+//! `src/protocol.rs` has had a test for since chapter 3.
 //!
-//! `mpsc::Sender::try_send` is the tool: it returns `Err(TrySendError::Full)` rather than waiting.
-//! Answer that with `ERR busy`, the same string the timeout uses, because from the client's side it
-//! is the same thing: the store is not keeping up. Its other error, `TrySendError::Closed`, means
-//! something else entirely and deserves the answer `apply` already gives it, because a full mailbox
-//! drains and a dead store task does not.
+//! Two cases the tests care about:
 //!
-//! This is load shedding, and the trade is worth saying out loud. Shedding early keeps latency
-//! bounded for the requests you do accept, and it turns a queue that would have absorbed a burst
-//! into an error the client can see. A store that only ever sheds is a store that is too small.
+//! **No log at all.** `ErrorKind::NotFound` is not a failure, it is a first start. Anything else
+//! from `File::open` is a failure and belongs to the caller.
+//!
+//! **A line that does not parse.** Refuse to start. A server that skips the records it cannot read
+//! comes up quietly holding a database that is missing writes it acknowledged, and nobody finds out
+//! until much later.
+//!
+//! `src/bin/server.rs` already replays before it serves, so you can prove the whole thing by hand:
+//! start the server, `SET users alice hello` from the client, stop the server with Ctrl-C, start it
+//! again, and ask for the key back.
+//!
+//! ## Where to go next
+//!
+//! What you have is a real write-ahead log with a real weakness: it grows forever, and a restart
+//! takes as long as the entire history. Databases answer that with **checkpointing**, writing the
+//! current state out in full and truncating the log up to that point, and with **segments** rather
+//! than a single file. The log also records requests rather than results, which is fine here
+//! because `SET` is deterministic and would not be if it could say "add one to this counter".
+//!
+//! Those are the next things to build, and they are all yours: the book stays where you left it.
 
 pub mod actor;
 pub mod protocol;
+pub mod retry;
 pub mod server;
+pub mod wal;
 
 use std::{
     collections::HashMap,

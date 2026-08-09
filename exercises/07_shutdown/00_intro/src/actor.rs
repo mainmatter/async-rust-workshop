@@ -3,7 +3,7 @@
 use std::time::Duration;
 
 use tokio::{
-    sync::{mpsc, oneshot},
+    sync::{mpsc, mpsc::error::TrySendError, oneshot},
     time::sleep,
 };
 
@@ -57,6 +57,23 @@ impl StoreHandle {
     /// Resolves when the store task is gone, for whatever reason.
     pub async fn closed(&self) {
         self.commands.closed().await;
+    }
+
+    /// Applies one request, refusing rather than waiting when the mailbox is full.
+    pub async fn try_apply(&self, request: Request) -> Response {
+        let (reply, answer) = oneshot::channel();
+
+        match self.commands.try_send(Command { request, reply }) {
+            Ok(()) => {}
+            Err(TrySendError::Full(_)) => return Response::Error("busy".to_owned()),
+            Err(TrySendError::Closed(_)) => {
+                return Response::Error("the store is gone".to_owned());
+            }
+        }
+
+        answer
+            .await
+            .unwrap_or_else(|_| Response::Error("the store is gone".to_owned()))
     }
 
     /// Applies one request and waits for the answer.

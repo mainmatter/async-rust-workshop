@@ -9,6 +9,7 @@ publish = false
 
 [workspace.dependencies]
 criterion = "0.8"
+tempfile = "3"
 tokio = "1"
 tokio-util = "0.7"
 tracing = "0.1"
