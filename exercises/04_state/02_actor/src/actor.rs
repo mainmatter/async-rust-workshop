@@ -41,22 +41,28 @@ async fn run(store: Store, mut inbox: mpsc::Receiver<Command>) {
 
 #[cfg(test)]
 mod tests {
+    use std::time::Duration;
+
     use crate::{
         Bucket, Key, Store, Value,
         actor::StoreHandle,
         protocol::{Request, Response},
     };
+    use tokio::time::timeout;
 
     #[tokio::test]
     async fn the_handle_answers() {
         let store = StoreHandle::spawn(Store::new());
 
-        assert_eq!(store.apply(set("alice", "hello")).await, Response::Ok);
         assert_eq!(
-            store.apply(get("alice")).await,
+            answered(store.apply(set("alice", "hello"))).await,
+            Response::Ok
+        );
+        assert_eq!(
+            answered(store.apply(get("alice"))).await,
             Response::Value(Value::parse("hello").unwrap())
         );
-        assert_eq!(store.apply(get("bob")).await, Response::Nil);
+        assert_eq!(answered(store.apply(get("bob"))).await, Response::Nil);
     }
 
     #[tokio::test]
@@ -64,10 +70,10 @@ mod tests {
         let store = StoreHandle::spawn(Store::new());
         let writer = store.clone();
 
-        writer.apply(set("alice", "hello")).await;
+        answered(writer.apply(set("alice", "hello"))).await;
 
         assert_eq!(
-            store.apply(get("alice")).await,
+            answered(store.apply(get("alice"))).await,
             Response::Value(Value::parse("hello").unwrap())
         );
     }
@@ -79,7 +85,9 @@ mod tests {
         let writers = (0..100)
             .map(|i| {
                 let store = store.clone();
-                tokio::spawn(async move { store.apply(set(&format!("user-{i}"), "hello")).await })
+                tokio::spawn(async move {
+                    answered(store.apply(set(&format!("user-{i}"), "hello"))).await
+                })
             })
             .collect::<Vec<_>>();
 
@@ -89,7 +97,7 @@ mod tests {
 
         for i in 0..100 {
             assert_eq!(
-                store.apply(get(&format!("user-{i}"))).await,
+                answered(store.apply(get(&format!("user-{i}")))).await,
                 Response::Value(Value::parse("hello").unwrap())
             );
         }
@@ -108,5 +116,14 @@ mod tests {
             key: Key::parse(key).unwrap(),
             value: Value::parse(value).unwrap(),
         }
+    }
+
+    async fn answered<F>(round_trip: F) -> Response
+    where
+        F: Future<Output = Response>,
+    {
+        timeout(Duration::from_secs(5), round_trip)
+            .await
+            .expect("the store never answered")
     }
 }

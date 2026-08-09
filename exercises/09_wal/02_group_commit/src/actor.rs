@@ -137,9 +137,10 @@ async fn commit(wal: &mut Wal, batch: &[Command]) -> io::Result<()> {
 #[cfg(test)]
 mod tests {
     use std::sync::atomic::Ordering;
+    use std::time::Duration;
 
     use tempfile::{TempDir, tempdir};
-    use tokio::fs::read_to_string;
+    use tokio::{fs::read_to_string, time::timeout};
 
     use crate::{
         Bucket, Key, Store, Value,
@@ -160,7 +161,9 @@ mod tests {
         let senders = (0..16)
             .map(|i| {
                 let store = store.clone();
-                tokio::spawn(async move { store.apply(set(&format!("user-{i}"), "hello")).await })
+                tokio::spawn(async move {
+                    answered(store.apply(set(&format!("user-{i}"), "hello"))).await
+                })
             })
             .collect::<Vec<_>>();
 
@@ -190,12 +193,15 @@ mod tests {
         let directory = tempdir().unwrap();
         let store = spawn(&directory).await;
 
-        assert_eq!(store.apply(set("alice", "hello")).await, Response::Ok);
         assert_eq!(
-            store.apply(get("alice")).await,
+            answered(store.apply(set("alice", "hello"))).await,
+            Response::Ok
+        );
+        assert_eq!(
+            answered(store.apply(get("alice"))).await,
             Response::Value(Value::parse("hello").unwrap())
         );
-        assert_eq!(store.apply(del("alice")).await, Response::Ok);
+        assert_eq!(answered(store.apply(del("alice"))).await, Response::Ok);
 
         assert_eq!(
             read_to_string(directory.path().join(PATH)).await.unwrap(),
@@ -211,11 +217,14 @@ mod tests {
         let store = StoreHandle::spawn(Store::new(), wal);
 
         assert!(
-            matches!(store.apply(set("alice", "hello")).await, Response::Error(_)),
+            matches!(
+                answered(store.apply(set("alice", "hello"))).await,
+                Response::Error(_)
+            ),
             "the client was told the write had happened"
         );
         assert_eq!(
-            store.apply(get("alice")).await,
+            answered(store.apply(get("alice"))).await,
             Response::Nil,
             "the change was applied even though it was never logged"
         );
@@ -247,5 +256,14 @@ mod tests {
             bucket: Bucket::parse("users").unwrap(),
             key: Key::parse(key).unwrap(),
         }
+    }
+
+    async fn answered<F>(round_trip: F) -> Response
+    where
+        F: Future<Output = Response>,
+    {
+        timeout(Duration::from_secs(5), round_trip)
+            .await
+            .expect("the store never answered")
     }
 }

@@ -86,6 +86,8 @@ async fn run(mut store: Store, mut inbox: mpsc::Receiver<Command>, delay: Durati
 mod tests {
     use std::time::Duration;
 
+    use tokio::time::timeout;
+
     use crate::{
         Bucket, Key, Store, Value,
         actor::StoreHandle,
@@ -101,7 +103,9 @@ mod tests {
         let senders = (0..8)
             .map(|i| {
                 let store = store.clone();
-                tokio::spawn(async move { store.try_apply(set(&format!("user-{i}"))).await })
+                tokio::spawn(
+                    async move { answered(store.try_apply(set(&format!("user-{i}")))).await },
+                )
             })
             .collect::<Vec<_>>();
 
@@ -129,9 +133,9 @@ mod tests {
     async fn a_store_that_is_keeping_up_answers_normally() {
         let store = StoreHandle::spawn(Store::new());
 
-        assert_eq!(store.try_apply(set("alice")).await, Response::Ok);
+        assert_eq!(answered(store.try_apply(set("alice"))).await, Response::Ok);
         assert_eq!(
-            store.try_apply(get("alice")).await,
+            answered(store.try_apply(get("alice"))).await,
             Response::Value(Value::parse("hello").unwrap())
         );
     }
@@ -149,5 +153,14 @@ mod tests {
             key: Key::parse(key).unwrap(),
             value: Value::parse("hello").unwrap(),
         }
+    }
+
+    async fn answered<F>(round_trip: F) -> Response
+    where
+        F: Future<Output = Response>,
+    {
+        timeout(Duration::from_secs(120), round_trip)
+            .await
+            .expect("the store never answered")
     }
 }

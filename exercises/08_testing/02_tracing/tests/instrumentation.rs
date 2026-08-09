@@ -4,6 +4,7 @@ use std::{
     collections::HashMap,
     fmt::Debug,
     sync::{Arc, Mutex},
+    time::Duration,
 };
 
 use testing_tracing::{
@@ -14,6 +15,7 @@ use testing_tracing::{
 use tokio::{
     io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
     task::yield_now,
+    time::timeout,
 };
 use tracing::{
     Event, Level, Subscriber,
@@ -148,9 +150,9 @@ impl TestClient {
             .await
             .unwrap();
 
-        self.lines
-            .next_line()
+        timeout(Duration::from_secs(5), self.lines.next_line())
             .await
+            .expect("the server never answered")
             .unwrap()
             .expect("the server hung up")
     }

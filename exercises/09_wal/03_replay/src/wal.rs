@@ -88,8 +88,12 @@ impl Wal {
 
 #[cfg(test)]
 mod tests {
+    use std::time::Duration;
     use tempfile::tempdir;
-    use tokio::fs::{read_to_string, write};
+    use tokio::{
+        fs::{read_to_string, write},
+        time::timeout,
+    };
 
     use crate::{
         Bucket, Key, Store, Value,
@@ -150,9 +154,12 @@ mod tests {
         let path = directory.path().join(PATH);
 
         let store = StoreHandle::spawn(Store::new(), Wal::open(&path).await.unwrap());
-        assert_eq!(store.apply(set("alice", "hello")).await, Response::Ok);
-        assert_eq!(store.apply(set("bob", "hi")).await, Response::Ok);
-        assert_eq!(store.apply(del("bob")).await, Response::Ok);
+        assert_eq!(
+            answered(store.apply(set("alice", "hello"))).await,
+            Response::Ok
+        );
+        assert_eq!(answered(store.apply(set("bob", "hi"))).await, Response::Ok);
+        assert_eq!(answered(store.apply(del("bob"))).await, Response::Ok);
         drop(store);
 
         let store = StoreHandle::spawn(
@@ -161,10 +168,10 @@ mod tests {
         );
 
         assert_eq!(
-            store.apply(get("alice")).await,
+            answered(store.apply(get("alice"))).await,
             Response::Value(Value::parse("hello").unwrap())
         );
-        assert_eq!(store.apply(get("bob")).await, Response::Nil);
+        assert_eq!(answered(store.apply(get("bob"))).await, Response::Nil);
     }
 
     #[tokio::test]
@@ -244,5 +251,14 @@ mod tests {
 
     fn users() -> Bucket {
         Bucket::parse("users").unwrap()
+    }
+
+    async fn answered<F>(round_trip: F) -> Response
+    where
+        F: Future<Output = Response>,
+    {
+        timeout(Duration::from_secs(5), round_trip)
+            .await
+            .expect("the store never answered")
     }
 }

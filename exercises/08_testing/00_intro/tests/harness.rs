@@ -99,9 +99,9 @@ impl TestClient {
             .await
             .unwrap();
 
-        self.lines
-            .next_line()
+        timeout(Duration::from_secs(5), self.lines.next_line())
             .await
+            .expect("the server never answered")
             .unwrap()
             .expect("the server hung up")
     }

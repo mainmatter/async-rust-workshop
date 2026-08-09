@@ -81,7 +81,7 @@ async fn run(mut store: Store, mut inbox: mpsc::Receiver<Command>, delay: Durati
 mod tests {
     use std::time::Duration;
 
-    use tokio::time::Instant;
+    use tokio::time::{Instant, timeout};
 
     use crate::{
         Bucket, Key, Store, Value,
@@ -99,7 +99,7 @@ mod tests {
         let senders = (0..3)
             .map(|i| {
                 let store = store.clone();
-                tokio::spawn(async move { store.apply(set(&format!("user-{i}"))).await })
+                tokio::spawn(async move { answered(store.apply(set(&format!("user-{i}")))).await })
             })
             .collect::<Vec<_>>();
 
@@ -118,12 +118,15 @@ mod tests {
         let store = StoreHandle::spawn_with_capacity(Store::new(), SLOW, 1);
 
         for i in 0..5 {
-            assert_eq!(store.apply(set(&format!("user-{i}"))).await, Response::Ok);
+            assert_eq!(
+                answered(store.apply(set(&format!("user-{i}")))).await,
+                Response::Ok
+            );
         }
 
         for i in 0..5 {
             assert_eq!(
-                store.apply(get(&format!("user-{i}"))).await,
+                answered(store.apply(get(&format!("user-{i}")))).await,
                 Response::Value(Value::parse("hello").unwrap())
             );
         }
@@ -142,5 +145,14 @@ mod tests {
             key: Key::parse(key).unwrap(),
             value: Value::parse("hello").unwrap(),
         }
+    }
+
+    async fn answered<F>(round_trip: F) -> Response
+    where
+        F: Future<Output = Response>,
+    {
+        timeout(Duration::from_secs(120), round_trip)
+            .await
+            .expect("the store never answered")
     }
 }

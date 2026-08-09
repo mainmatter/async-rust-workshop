@@ -41,7 +41,7 @@ pub fn apply(request: Request, store: &mut Store) -> Response {
 
 #[cfg(test)]
 mod tests {
-    use std::net::SocketAddr;
+    use std::{net::SocketAddr, time::Duration};
 
     use tokio::{
         io::{AsyncBufReadExt, AsyncWriteExt, BufReader, Lines},
@@ -49,6 +49,7 @@ mod tests {
             TcpStream,
             tcp::{OwnedReadHalf, OwnedWriteHalf},
         },
+        time::timeout,
     };
 
     use crate::{Store, server::serve};
@@ -117,9 +118,9 @@ mod tests {
                 .await
                 .unwrap();
 
-            self.lines
-                .next_line()
+            timeout(Duration::from_secs(5), self.lines.next_line())
                 .await
+                .expect("the server never answered")
                 .unwrap()
                 .expect("the server hung up")
         }
