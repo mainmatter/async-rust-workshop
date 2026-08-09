@@ -1,30 +1,33 @@
 # Draining
 
+`serve` today is a loop with no way out of it. It accepts, it spawns, it goes round again, and the
+only thing that ever ends it is the process ending:
+
+```rust
+loop {
+    let (stream, _) = listener.accept().await?;   // nothing here is watching for a reason to stop
+    // ...
+}
+```
+
 Graceful shutdown is two mechanisms doing two different jobs.
 
 **Stop taking new work**, by racing the accept against the token:
 
 ```rust
-let accepted = tokio::select! {
-    _ = shutdown.cancelled() => break,
-    accepted = listener.accept() => accepted?,
-};
+shutdown.cancelled().await;   // resolves once anybody has called cancel(), and stays resolved
 ```
 
-`accept` is cancel safe, so losing that future when the token fires costs nothing: a connection that
+`accept` is cancel safe, so losing that future when the token wins costs nothing: a connection that
 had not been accepted yet simply stays in the kernel's backlog, and closing the listener means the
 client gets a connection refused and can go elsewhere.
 
-**Wait for the work in flight**, by spawning through a tracker:
+**Wait for the work in flight**, by spawning through a tracker instead of through `tokio::spawn`:
 
 ```rust
-connections.spawn(async move { ... });
-
-// after the loop
-connections.close();
-connections.wait().await;
-
-Ok(())
+connections.spawn(future);    // same as tokio::spawn, but counted
+connections.close();          // no more will be added
+connections.wait().await;     // resolves when every counted task has finished
 ```
 
 `close()` says no more tasks will be added; `wait()` resolves when every task spawned through it has

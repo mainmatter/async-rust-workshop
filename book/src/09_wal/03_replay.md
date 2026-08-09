@@ -1,34 +1,19 @@
 # Replay
 
-The log has been correct since the start of this chapter and has never once been read. Reading it is
-the last thing `minidb` needs:
+The log has been correct since the start of this chapter and has never once been read. `minidb`
+still starts every time with `Store::new()` and no memory of anything, and reading the log back is
+the last thing it needs.
+
+Replaying is running the requests again, in order, against an empty store. Everything it takes
+already exists: `File::open` and the same `BufReader::lines` that reads the wire, `Request::parse`
+from chapter 3, and `apply`. This function is glue, and that is the point of having chosen the wire
+format as the log format.
 
 ```rust
-pub async fn replay(path: &Path) -> io::Result<Store> {
-    let mut store = Store::new();
-
-    let file = match File::open(path).await {
-        Ok(file) => file,
-        Err(error) if error.kind() == ErrorKind::NotFound => return Ok(store),
-        Err(error) => return Err(error),
-    };
-
-    let mut records = BufReader::new(file).lines();
-
-    while let Some(record) = records.next_line().await? {
-        let request = Request::parse(&record)
-            .map_err(|error| io::Error::other(format!("{record}: {error}")))?;
-
-        apply(request, &mut store);
-    }
-
-    Ok(store)
-}
+File::open(path).await;      // -> io::Result<File>, and the error kind matters here
+error.kind();                // -> ErrorKind, which has a NotFound worth treating separately
+io::Error::other(message);   // for turning a parse failure into something this can return
 ```
-
-Replaying is running the requests again, in order, against an empty store. The parser and `apply`
-already existed; this function is glue, and that is the point of having chosen the wire format as the
-log format.
 
 ## Two cases worth deciding on purpose
 

@@ -1,25 +1,26 @@
 # An idle timeout
 
 A connection that says nothing is not free. It holds a task, a buffer, a file descriptor, and a slot
-in whatever limit you set later. Servers close them:
+in whatever limit you set later. The loop you have waits for the client for as long as the client
+feels like taking:
 
 ```rust
-loop {
-    let line = tokio::select! {
-        line = requests.next_line() => line?,
-        _ = sleep(idle) => return Ok(()),
-    };
+requests.next_line().await?   // -> Some(line), eventually, or never
+```
 
-    let Some(line) = line else {
-        return Ok(());
-    };
+Servers close those connections, and the tool for it is a macro that waits for the first of several
+futures rather than for one:
 
-    // ... answer it
+```rust
+tokio::select! {
+    a = first  => /* first finished, `second` was dropped where it stood */,
+    b = second => /* and the other way round */,
 }
 ```
 
-`select!` polls both branches and takes whichever finishes first. If the sleep wins, the read future
-is dropped and the function returns, which drops the stream, which closes the socket.
+`select!` polls every branch and takes whichever finishes first. The branch that did not win has its
+future dropped, which is the entire subject of this chapter: a read that loses to a timer is a read
+that never happened.
 
 ## The two ways a connection ends
 

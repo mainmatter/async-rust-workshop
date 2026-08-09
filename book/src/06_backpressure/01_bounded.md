@@ -2,24 +2,17 @@
 
 Waiting for a full mailbox is the right default, and it is the wrong answer for a request that has a
 deadline anyway. `REQUEST_LIMIT` is two seconds; if the queue is already full of work that will take
-longer than that, the client is better off being told now.
+longer than that, the client is better off being told now. What `apply` does today is wait:
 
 ```rust
-pub async fn try_apply(&self, request: Request) -> Response {
-    let (reply, answer) = oneshot::channel();
+self.commands.send(command).await   // -> back when there is room, however long that takes
+```
 
-    match self.commands.try_send(Command { request, reply }) {
-        Ok(()) => {}
-        Err(TrySendError::Full(_)) => return Response::Error("busy".to_owned()),
-        Err(TrySendError::Closed(_)) => {
-            return Response::Error("the store is gone".to_owned());
-        }
-    }
+`try_apply` is `apply` with one line changed. It still makes a `oneshot` pair of its own and still
+awaits the reply on it; what differs is how the command is handed over:
 
-    answer
-        .await
-        .unwrap_or_else(|_| Response::Error("the store is gone".to_owned()))
-}
+```rust
+self.commands.try_send(command);   // -> Result<(), TrySendError<T>>, right now, either way
 ```
 
 `try_send` returns instead of waiting, and its two errors mean opposite things. **Full** is temporary

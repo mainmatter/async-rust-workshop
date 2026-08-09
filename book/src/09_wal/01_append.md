@@ -16,17 +16,13 @@ Two decisions live in `log`.
 ## What gets logged
 
 A `GET` changes nothing, so writing it down would cost a disk sync to record that nothing happened.
-`SET` and `DEL` are the log:
+`SET` and `DEL` are the log, and `matches!(request, Request::Get { .. })` is how you say so.
+
+`Wal` gives you two calls, and the difference between them is the whole chapter:
 
 ```rust
-async fn log(wal: &mut Wal, request: &Request) -> io::Result<()> {
-    if matches!(request, Request::Get { .. }) {
-        return Ok(());
-    }
-
-    wal.append(request).await?;
-    wal.sync().await
-}
+wal.append(&request).await;   // -> io::Result<()>, into a buffer, not onto a disk
+wal.sync().await;             // -> io::Result<()>, and back only once the disk agrees
 ```
 
 ## When it is safe to say yes

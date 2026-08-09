@@ -4,6 +4,13 @@ One sync per request is correct and slow. A sync is a round trip to a physical d
 `tokio::fs` runs it on the blocking pool, so a hundred requests a second is a hundred trips to the
 disk and a hundred trips to the pool, whether or not those requests arrived together.
 
+What the last exercise left you with pays that cost once per request, however many are waiting:
+
+```rust
+wal.append(request).await?;
+wal.sync().await          // one trip to the disk, for one change
+```
+
 They usually did arrive together. That is what a mailbox is.
 
 ```rust
@@ -21,28 +28,14 @@ while inbox.recv_many(&mut batch, BATCH).await > 0 {
 ```
 
 `recv_many` takes everything that is waiting, up to a limit, in one call. Sixteen requests that
-arrived while the last sync was in flight become one `Vec` rather than sixteen turns of the loop, and
-`commit` appends all of them and syncs once:
+arrived while the last sync was in flight become one `Vec` rather than sixteen turns of the loop.
+That loop is written for you; `commit` is not. It gets the whole batch, and the same two calls as
+before, and has to decide how many times to make each of them.
 
-```rust
-async fn commit(wal: &mut Wal, batch: &[Command]) -> io::Result<()> {
-    let mut changed = false;
-
-    for Command { request, .. } in batch {
-        if matches!(request, Request::Get { .. }) {
-            continue;
-        }
-
-        wal.append(request).await?;
-        changed = true;
-    }
-
-    if changed { wal.sync().await } else { Ok(()) }
-}
-```
-
-A batch that was all reads syncs nothing at all, which is the same decision as the last exercise
-applied to a set.
+Two things fall out of that. Appending is per record and syncing is not, so the count of `append`
+calls and the count of `sync` calls are different numbers. And a batch that was all reads syncs
+nothing at all, which is the same decision as the last exercise applied to a set, so `commit` has to
+know whether the batch changed anything before it decides to sync.
 
 ## Why this is not cheating
 

@@ -1,16 +1,16 @@
 # Bounding the work
 
 The idle timeout protects against a client that says nothing. It does nothing about a store that
-takes too long to answer:
+takes too long to answer, and the line that asks the store has no upper bound on it at all:
 
 ```rust
-let response = match Request::parse(&line) {
-    Ok(request) => match timeout(REQUEST_LIMIT, store.apply(request)).await {
-        Ok(response) => response,
-        Err(_) => Response::Error("busy".to_owned()),
-    },
-    Err(error) => Response::Error(error.to_string()),
-};
+store.apply(request).await   // back when the store is ready, and not before
+```
+
+The tool wraps a future and gives up on it:
+
+```rust
+timeout(duration, future).await;   // -> Result<T, Elapsed>
 ```
 
 Now every request has an upper bound, and a client gets an answer either way. That is worth

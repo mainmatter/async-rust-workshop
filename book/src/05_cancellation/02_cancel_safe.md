@@ -54,27 +54,17 @@ sleep each time round the loop. With a tick every five seconds, the deadline res
 ever fire, and the idle timeout from the previous exercise silently stops working. No error, no
 warning, and the only reason you know is that a test says so.
 
-A future that has to outlive the iteration has to live outside it:
+A future that has to outlive the iteration has to be built outside it, and then polled in place
+rather than consumed. Two things make that possible:
 
 ```rust
-let idle_deadline = sleep(idle);
-tokio::pin!(idle_deadline);
-
-loop {
-    let line = tokio::select! {
-        line = requests.next_line() => line?,
-        _ = housekeeping.tick() => continue,
-        _ = &mut idle_deadline => return Ok(()),
-    };
-
-    // ... and once a line has arrived:
-    idle_deadline.as_mut().reset(Instant::now() + idle);
-}
+tokio::pin!(deadline);                          // Sleep -> Pin<&mut Sleep>, and it cannot move again
+deadline.as_mut().reset(Instant::now() + d);    // pushes it out, without allocating a new timer
 ```
 
-`tokio::pin!` puts the sleep somewhere it cannot move, which is what lets the branch poll it by
-`&mut` instead of consuming it. `Sleep::reset` pushes the deadline forward without allocating a new
-timer.
+`tokio::pin!` puts the sleep somewhere it cannot move, which is what lets a branch poll it by `&mut`
+instead of taking ownership of it. `Sleep::reset` is what you reach for when the deadline should
+start again, and the question the exercise asks is when that is.
 
 This is the one place in the workshop where `Pin` shows up in code you write, and the reason is
 exactly the one from chapter 1: a future may hold references into itself, so polling it repeatedly

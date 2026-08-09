@@ -22,7 +22,8 @@ with the slow part, and a heartbeat task that should tick every ten milliseconds
 Tokio keeps a second, much larger pool of threads for exactly this:
 
 ```rust
-let checksum = tokio::task::spawn_blocking(move || checksum(&store)).await.unwrap();
+tokio::task::spawn_blocking(move || /* the work that will not yield */)
+    .await   // -> Result<T, JoinError>
 ```
 
 The closure runs on a blocking thread, the calling task awaits the result and yields while it waits,

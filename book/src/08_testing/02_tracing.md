@@ -13,10 +13,9 @@ is a moment. Every event records which spans it happened inside, so the context 
 data instead of being copied into every message.
 
 ```rust
-#[instrument(name = "connection", skip_all)]
-pub async fn handle_connection<S>(stream: S, store: &StoreHandle, idle: Duration) -> io::Result<()> {
-    // ...
-    info!(request = %line, response = %response, "handled");
+#[instrument]
+async fn upload(id: u64) {
+    // everything in here, including anything it awaits, happens inside a span named "upload"
 }
 ```
 
@@ -35,8 +34,8 @@ Two details from the attribute:
 ## Fields, not sentences
 
 ```rust
-info!(request = %line, response = %response, "handled");   // yes
-info!("handled {line} -> {response}");                     // no
+info!(bytes = %written, peer = %addr, "wrote");   // yes
+info!("wrote {written} bytes to {addr}");         // no
 ```
 
 Both print about the same thing. Only the first can be indexed, so that a collector can answer "how

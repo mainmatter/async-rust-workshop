@@ -17,16 +17,10 @@ The fix is to have all the work in flight before awaiting any of it. `JoinSet` i
 work is a set of tasks of the same shape:
 
 ```rust
-let mut lookups = JoinSet::new();
+let mut set = JoinSet::new();
 
-for key in keys {
-    let store = Arc::clone(&store);
-    lookups.spawn(async move { slow_get(&store, &bucket, &key).await });
-}
-
-while let Some(result) = lookups.join_next().await {
-    values.push(result.unwrap());
-}
+set.spawn(async move { /* one piece of the work */ });   // Send + 'static, like any spawn
+set.join_next().await;                                   // -> Option<Result<T, JoinError>>
 ```
 
 `JoinSet` hands you results in completion order, not in the order you spawned them, which is exactly

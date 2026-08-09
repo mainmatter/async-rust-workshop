@@ -21,16 +21,15 @@ turn of the loop.
 
 ## Inside the connection
 
-```rust
-let response = {
-    let mut store = store.lock().await;
-    apply(request, &mut store)
-};
+`serve` is written for you. `handle_connection` is not, and it now has a shared store where it used
+to have an exclusive one. One call gets you in:
 
-writer.write_all(format!("{response}\n").as_bytes()).await?;
+```rust
+store.lock().await;   // -> MutexGuard<'_, Store>, once whoever holds it lets go
 ```
 
-Note the block. The guard is dropped before the write, so the lock is held for the length of a
+Where that call goes is the decision. Take the lock once per request rather than once per
+connection, and be finished with the guard before the write, so the lock is held for the length of a
 `HashMap` operation rather than for the length of a network write to a client that may be on the
 other side of the world.
 
@@ -41,13 +40,10 @@ client.
 
 ## The dereference
 
-```rust
-apply(request, &mut *store.lock().await)
-```
-
-`lock().await` gives a `MutexGuard<Store>`, not a `Store`, so `&mut` on it is a `&mut MutexGuard`.
-`&mut *` derefs through the guard. The compiler's message is clear enough once you have seen it once,
-which is the point of meeting it here.
+`apply` wants a `&mut Store`, and `lock().await` gives you a `MutexGuard<Store>`, so `&mut` on it is
+a `&mut MutexGuard` and the types do not line up. `&mut *` is the operator that derefs through the
+guard. The compiler's message is clear enough once you have seen it once, which is the point of
+meeting it here.
 
 ## Why `tokio::sync::Mutex` here
 

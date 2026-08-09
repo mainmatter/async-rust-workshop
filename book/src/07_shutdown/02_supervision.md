@@ -7,16 +7,24 @@ keep saying so.
 A process that is up but cannot do anything is worse than one that is down. Nothing restarts it, and
 every liveness check that only asks whether the port is open reports success.
 
+The accept loop you wrote in the last exercise watches two things, and the store is not one of them:
+
 ```rust
-let accepted = tokio::select! {
-    _ = shutdown.cancelled() => break,
-    _ = store.closed() => return Err(io::Error::other("the store task is gone")),
-    accepted = listener.accept() => accepted?,
-};
+tokio::select! {
+    _ = shutdown.cancelled() => /* ... */,
+    accepted = listener.accept() => /* ... */,
+}
 ```
 
-`StoreHandle::closed` is `mpsc::Sender::closed`: it resolves when the receiver has been dropped, and
-the receiver is dropped when the store task ends, whether it returned normally or panicked.
+`StoreHandle` now exposes the third thing it could be watching:
+
+```rust
+store.closed().await;   // mpsc::Sender::closed: resolves once the Receiver has been dropped
+```
+
+The receiver is dropped when the store task ends, whether it returned normally or panicked, so this
+is one await that answers "is the thing I depend on still alive". What `serve` should do when it
+resolves is the exercise.
 
 ## Dying on purpose
 

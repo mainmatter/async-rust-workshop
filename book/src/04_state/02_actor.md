@@ -1,6 +1,7 @@
 # An actor
 
-Stop sharing the store. Give it to a task, and hand everybody else a way to ask:
+Stop sharing the store. Give it to a task, and hand everybody else a way to ask. The two types the
+exercise ships say the whole design:
 
 ```rust
 #[derive(Clone)]
@@ -12,16 +13,10 @@ pub struct Command {
     pub request: Request,
     pub reply: oneshot::Sender<Response>,
 }
-
-async fn run(mut store: Store, mut inbox: mpsc::Receiver<Command>) {
-    while let Some(Command { request, reply }) = inbox.recv().await {
-        let _ = reply.send(apply(request, &mut store));
-    }
-}
 ```
 
-The loop owns `store` by value and holds `&mut` to it for as long as it likes, because nothing else
-in the process can reach it. No lock, no `Arc`, no guard to think about.
+The task behind that sender takes the store by value and holds `&mut` to it for as long as it likes,
+because nothing else in the process can reach it. No lock, no `Arc`, no guard to think about.
 
 ## The two channels
 
@@ -29,26 +24,21 @@ in the process can reach it. No lock, no `Arc`, no guard to think about.
 capacity is a decision with consequences, which is chapter 6.
 
 **`oneshot`** carries the answer back. One value, one direction, allocated per request. The caller
-holds the receiving half and awaits it:
+makes the pair, sends the sending half away inside the command, and awaits the other half.
+
+Four calls, and what each of them reports when things go wrong:
 
 ```rust
-pub async fn apply(&self, request: Request) -> Response {
-    let (reply, answer) = oneshot::channel();
-
-    if self.commands.send(Command { request, reply }).await.is_err() {
-        return Response::Error("the store is gone".to_owned());
-    }
-
-    answer
-        .await
-        .unwrap_or_else(|_| Response::Error("the store is gone".to_owned()))
-}
+mpsc::channel(capacity);   // -> (Sender<T>, Receiver<T>); the Sender is Clone
+inbox.recv().await;        // -> Option<T>; None once the last Sender has been dropped
+oneshot::channel();        // -> (Sender<T>, Receiver<T>) for exactly one value
+reply.send(value);         // -> Result<(), T>; Err when nobody is waiting any more
 ```
 
-Both error paths mean the same thing: the store task is not there any more, either because the
-channel is closed or because it died holding the `oneshot` sender. Neither can be ignored, and the
-answer to both is to tell the client the truth. Chapter 7 asks whether the server should stay up at
-all in that state.
+Two of those can tell you the store task is gone: sending a command can fail because the channel is
+closed, and awaiting the answer can fail because the task died holding the `oneshot` sender. Both
+mean the same thing, neither can be ignored, and the answer to both is to tell the client the truth.
+Chapter 7 asks whether the server should stay up at all in that state.
 
 ## What changed for the caller
 

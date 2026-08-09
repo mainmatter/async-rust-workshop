@@ -1,28 +1,27 @@
 # Retrying, and testing that it waited
 
-The client connects once, and if nobody is listening it gives up. Every real client retries, and
-every retry that does not back off turns one restarting server into a thundering herd.
+The client connects once, and if nobody is listening it gives up:
 
 ```rust
-pub async fn with_backoff<O, F, T, E>(attempts: u32, base: Duration, mut operation: O) -> Result<T, E>
+let stream = TcpStream::connect(&addr).await?;   // one go, and then out
+```
+
+Every real client retries, and every retry that does not back off turns one restarting server into a
+thundering herd. `with_backoff` is the wrapper that fixes it, and its signature is the interesting
+part:
+
+```rust
+pub async fn with_backoff<O, F, T, E>(attempts: u32, base: Duration, operation: O) -> Result<T, E>
 where
     O: FnMut() -> F,
     F: Future<Output = Result<T, E>>,
-{
-    let mut attempt = 1;
-
-    loop {
-        match operation().await {
-            Ok(value) => return Ok(value),
-            Err(error) if attempt >= attempts => return Err(error),
-            Err(_) => {
-                sleep(base * 2u32.pow(attempt - 1)).await;
-                attempt += 1;
-            }
-        }
-    }
-}
 ```
+
+The shape underneath is a loop around three outcomes. A call that succeeded returns its value. A
+call that failed with attempts still to come waits and goes round again. A call that failed on the
+last attempt returns that error, and the count of attempts made is what tells those last two apart.
+The wait doubles by raising two to the number of failures so far, and it lives on the failure path
+only, so nothing is waited for after the final attempt.
 
 ## Why the argument is a closure
 

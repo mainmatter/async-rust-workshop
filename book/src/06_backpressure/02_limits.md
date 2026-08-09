@@ -1,29 +1,27 @@
 # Admission control
 
 The mailbox is bounded and the number of connections is not. Every accepted socket is a task, a
-buffer, and a file descriptor, and `serve` will happily accept ten thousand of them.
+buffer, and a file descriptor, and `serve` will happily accept ten thousand of them. Nothing in the
+loop counts:
 
 ```rust
-let permits = Arc::new(Semaphore::new(max_connections));
-
-loop {
-    let permit = Arc::clone(&permits).acquire_owned().await.expect("never closed");
-    let (stream, _) = listener.accept().await?;
-    let store = store.clone();
-
-    tokio::spawn(async move {
-        let _permit = permit;
-        let _ = handle_connection(stream, &store, IDLE_LIMIT).await;
-    });
-}
+let (stream, _) = listener.accept().await?;   // ... and again, and again
 ```
 
-`Semaphore` holds a fixed number of permits. Take one before serving a connection, hold it until the
-connection ends, and the count of live connections cannot exceed the limit.
+`Semaphore` holds a fixed number of permits:
+
+```rust
+Semaphore::new(limit);                            // an Arc<Semaphore> is what tasks share
+Arc::clone(&permits).acquire_owned().await;       // -> Result<OwnedSemaphorePermit, AcquireError>
+```
+
+Take one before serving a connection, hold it until the connection ends, and the count of live
+connections cannot exceed the limit. `acquire_owned` rather than `acquire` because the permit has to
+be moved into the task, and the permit is released by its own `Drop` rather than by any call.
 
 ## Where you acquire it is the design
 
-Acquire **before** `accept`, as above, and the listener stops taking connections off the kernel's
+Acquire **before** `accept` and the listener stops taking connections off the kernel's
 backlog when it is at capacity. A client that cannot be served yet waits in the backlog queue,
 which is the operating system's memory rather than yours, and if the backlog fills the kernel refuses
 the connection outright. That is a fast, cheap "no" that never reaches your process.

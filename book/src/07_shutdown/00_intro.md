@@ -26,16 +26,8 @@ decides where it is safe to stop.
 and `wait()` for everything spawned to finish. That is the draining step, and doing it by hand with a
 `Vec<JoinHandle>` is where the bugs live.
 
-The pattern in full:
-
-```rust
-let accepted = tokio::select! {
-    _ = shutdown.cancelled() => break,
-    accepted = listener.accept() => accepted?,
-};
-```
-
-Cancellation ends the accept loop, `TaskTracker` drains what is already running.
+Between them they cover both halves: cancellation ends the accept loop, and the tracker drains what
+is already running. Neither knows about the other, which is why the ordering is yours to get right.
 
 ## Something stopping without being asked
 

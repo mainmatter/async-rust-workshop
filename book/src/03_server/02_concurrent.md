@@ -1,19 +1,21 @@
 # One task per connection
 
-Serving two clients at once is a two-line change:
+The loop you have serves one client at a time, because it waits for the connection it just accepted
+before it accepts another:
 
 ```rust
-loop {
-    let (stream, _) = listener.accept().await?;
-
-    tokio::spawn(async move {
-        let _ = handle_connection(stream).await;
-    });
-}
+let (stream, _) = listener.accept().await?;
+handle_connection(stream, &mut store).await?;   // nothing else happens until this returns
 ```
 
-The accept loop goes straight back to accepting, and each connection makes progress on a task of its
-own. This is the shape of essentially every Tokio server, from this one to `hyper`.
+Serving two clients at once is a two-line change, and the tool is the one from chapter 2:
+
+```rust
+tokio::spawn(future);   // -> JoinHandle<T>, and `future` must be Send + 'static
+```
+
+The accept loop then goes straight back to accepting, and each connection makes progress on a task
+of its own. This is the shape of essentially every Tokio server, from this one to `hyper`.
 
 Notice what spawning bought for free. An error on one connection now ends that task and nothing
 else, because the `Result` is swallowed at the boundary rather than propagated into `serve`. That is

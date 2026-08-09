@@ -28,14 +28,14 @@ the test that proves it.
 
 ## Reading lines
 
-```rust
-let (reader, mut writer) = tokio::io::split(stream);
-let mut requests = BufReader::new(reader).lines();
+Three pieces do the framing, and it is worth knowing each of them by name rather than as a block to
+copy:
 
-while let Some(line) = requests.next_line().await? {
-    // ...
-    writer.write_all(format!("{response}\n").as_bytes()).await?;
-}
+```rust
+tokio::io::split(stream);        // -> (ReadHalf<S>, WriteHalf<S>)
+BufReader::new(reader).lines();  // -> Lines<BufReader<R>>
+lines.next_line().await;         // -> io::Result<Option<String>>, no trailing newline
+writer.write_all(bytes).await;   // and the newline is yours to add back
 ```
 
 `BufReader` matters for more than speed here. Without it, every `read` is a syscall, and with a
