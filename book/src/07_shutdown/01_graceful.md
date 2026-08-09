@@ -34,6 +34,19 @@ connections.wait().await;     // resolves when every counted task has finished
 finished. Without the `close()`, `wait()` never returns, which is the single most common way to get
 this wrong.
 
+## Every await in the loop, not just the interesting one
+
+The accept is not the only place this loop stops. Chapter 6 put a `Semaphore` in front of it, and at
+capacity the loop parks on the acquire instead, where nothing is watching the token. Cancel then, and
+the server carries on waiting for a permit; when one frees, `select!` picks between a ready
+`cancelled()` and a ready `accept()` at random, so a server that was told to stop accepts roughly
+half the clients that turn up anyway. One of the tests says so, with a limit of zero, because a
+server that has no permits to hand out can only leave that loop by looking at the token.
+
+The general point is worth more than the fix: **cancellation is a property of the whole loop, not of
+one await in it.** Every point where an iteration can block is a point where a shutdown can be
+missed, and the only way to find them is to go through them one at a time and ask what is watching.
+
 ## Draining is not cancelling
 
 Notice that the connection tasks are not cancelled. They are left alone to finish what they are

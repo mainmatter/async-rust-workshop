@@ -39,10 +39,10 @@ pub async fn serve(
     let connections = TaskTracker::new();
 
     loop {
-        let permit = Arc::clone(&permits)
-            .acquire_owned()
-            .await
-            .expect("never closed");
+        let permit = tokio::select! {
+            _ = shutdown.cancelled() => break,
+            permit = Arc::clone(&permits).acquire_owned() => permit.expect("never closed"),
+        };
 
         let accepted = tokio::select! {
             _ = shutdown.cancelled() => break,

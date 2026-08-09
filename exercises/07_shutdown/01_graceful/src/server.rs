@@ -202,6 +202,27 @@ mod tests {
         assert!(!served, "the server answered after it had shut down");
     }
 
+    #[tokio::test]
+    async fn a_server_with_no_permits_left_still_shuts_down() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let shutdown = CancellationToken::new();
+
+        let server = tokio::spawn(serve(
+            listener,
+            StoreHandle::spawn(Store::new()),
+            0,
+            shutdown.clone(),
+        ));
+
+        shutdown.cancel();
+
+        timeout(Duration::from_secs(5), server)
+            .await
+            .expect("the loop was waiting for a permit and never looked at the token")
+            .unwrap()
+            .unwrap();
+    }
+
     struct TestClient {
         lines: Lines<BufReader<OwnedReadHalf>>,
         writer: OwnedWriteHalf,
