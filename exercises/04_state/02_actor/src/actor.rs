@@ -25,7 +25,20 @@ impl StoreHandle {
 
     /// Applies one request and waits for the answer.
     pub async fn apply(&self, request: Request) -> Response {
-        todo!("send the request with a reply channel, then wait on it")
+        let (reply, answer) = oneshot::channel();
+
+        if self
+            .commands
+            .send(Command { request, reply })
+            .await
+            .is_err()
+        {
+            return Response::Error("the store is gone".to_owned());
+        }
+
+        answer
+            .await
+            .unwrap_or_else(|_| Response::Error("the store is gone".to_owned()))
     }
 }
 
@@ -55,8 +68,10 @@ pub fn apply(request: Request, store: &mut Store) -> Response {
     }
 }
 
-async fn run(store: Store, mut inbox: mpsc::Receiver<Command>) {
-    todo!("take commands one at a time, apply them, and answer")
+async fn run(mut store: Store, mut inbox: mpsc::Receiver<Command>) {
+    while let Some(Command { request, reply }) = inbox.recv().await {
+        let _ = reply.send(apply(request, &mut store));
+    }
 }
 
 #[cfg(test)]

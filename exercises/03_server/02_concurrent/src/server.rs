@@ -14,7 +14,14 @@ use crate::{
 
 /// Serves every client that turns up, each on a task of its own.
 pub async fn serve(listener: TcpListener) -> io::Result<()> {
-    todo!("accept, spawn, and get straight back to accepting")
+    loop {
+        let (stream, _) = listener.accept().await?;
+
+        tokio::spawn(async move {
+            let mut store = Store::new();
+            let _ = handle_connection(stream, &mut store).await;
+        });
+    }
 }
 
 /// Talks to one client until it goes away.

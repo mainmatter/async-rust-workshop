@@ -138,9 +138,12 @@ async fn run(mut store: Store, mut inbox: mpsc::Receiver<Command>, mut wal: Wal,
 
 /// Makes a change durable. Called before the change is applied, which is the whole point.
 async fn log(wal: &mut Wal, request: &Request) -> io::Result<()> {
-    let _ = (wal, request);
+    if matches!(request, Request::Get { .. }) {
+        return Ok(());
+    }
 
-    todo!("append a SET or a DEL to the log and sync it, and write nothing at all for a GET")
+    wal.append(request).await?;
+    wal.sync().await
 }
 
 #[cfg(test)]

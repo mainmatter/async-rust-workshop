@@ -144,7 +144,20 @@ pub enum ValueError {
 
 /// Looks up every key at once, returning the values in the order the keys were given.
 pub async fn get_all(store: Arc<Store>, bucket: Bucket, keys: Vec<Key>) -> Vec<Option<Value>> {
-    todo!("one task per key, then collect the results in order")
+    let lookups = keys
+        .into_iter()
+        .map(|key| {
+            let (store, bucket) = (Arc::clone(&store), bucket.clone());
+            tokio::spawn(async move { slow_get(&store, &bucket, &key).await })
+        })
+        .collect::<Vec<_>>();
+
+    let mut found = Vec::with_capacity(lookups.len());
+    for lookup in lookups {
+        found.push(lookup.await.expect("the lookup did not panic"));
+    }
+
+    found
 }
 
 /// Looks a value up on a task of its own, which is why it takes the store by value.
