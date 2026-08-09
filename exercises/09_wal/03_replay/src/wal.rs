@@ -1,7 +1,7 @@
 //! The write-ahead log: what the store was told to do, in the order it was told.
 
 use std::{
-    io,
+    io::{self, ErrorKind},
     path::Path,
     sync::{
         Arc,
@@ -11,10 +11,10 @@ use std::{
 
 use tokio::{
     fs::{File, OpenOptions},
-    io::AsyncWriteExt,
+    io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
 };
 
-use crate::{Store, protocol::Request};
+use crate::{Store, actor::apply, protocol::Request};
 
 /// Where the log lives unless somebody says otherwise.
 pub const PATH: &str = "minidb.wal";
@@ -61,9 +61,24 @@ impl Wal {
     ///
     /// A log that is not there is not an error: it is what a first start looks like.
     pub async fn replay(path: &Path) -> io::Result<Store> {
-        let _ = path;
+        let mut store = Store::new();
 
-        todo!("read the log line by line, parse each one, and apply it to a store")
+        let file = match File::open(path).await {
+            Ok(file) => file,
+            Err(error) if error.kind() == ErrorKind::NotFound => return Ok(store),
+            Err(error) => return Err(error),
+        };
+
+        let mut records = BufReader::new(file).lines();
+
+        while let Some(record) = records.next_line().await? {
+            let request = Request::parse(&record)
+                .map_err(|error| io::Error::other(format!("{record}: {error}")))?;
+
+            apply(request, &mut store);
+        }
+
+        Ok(store)
     }
 
     /// Hands one record to `tokio::fs`, which is not the same as handing it to the disk.

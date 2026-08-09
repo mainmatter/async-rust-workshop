@@ -27,7 +27,19 @@ pub async fn serve(listener: TcpListener, store: Arc<Mutex<Store>>) -> io::Resul
 
 /// Talks to one client until it goes away.
 pub async fn handle_connection(stream: TcpStream, store: &Arc<Mutex<Store>>) -> io::Result<()> {
-    todo!("same loop as before, but the store now has to be locked for each request")
+    let (reader, mut writer) = stream.into_split();
+    let mut requests = BufReader::new(reader).lines();
+
+    while let Some(line) = requests.next_line().await? {
+        let response = match Request::parse(&line) {
+            Ok(request) => apply(request, &mut *store.lock().await),
+            Err(error) => Response::Error(error.to_string()),
+        };
+
+        writer.write_all(format!("{response}\n").as_bytes()).await?;
+    }
+
+    Ok(())
 }
 
 /// Applies a request to the store.

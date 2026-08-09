@@ -148,9 +148,18 @@ async fn run(mut store: Store, mut inbox: mpsc::Receiver<Command>, mut wal: Wal,
 
 /// Makes a whole batch of changes durable, before any one of them is applied.
 async fn commit(wal: &mut Wal, batch: &[Command]) -> io::Result<()> {
-    let _ = (wal, batch);
+    let mut changed = false;
 
-    todo!("append every change in the batch, and sync once for all of them")
+    for Command { request, .. } in batch {
+        if matches!(request, Request::Get { .. }) {
+            continue;
+        }
+
+        wal.append(request).await?;
+        changed = true;
+    }
+
+    if changed { wal.sync().await } else { Ok(()) }
 }
 
 #[cfg(test)]

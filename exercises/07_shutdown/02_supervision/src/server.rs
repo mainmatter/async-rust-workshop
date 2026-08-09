@@ -48,6 +48,7 @@ pub async fn serve(
 
         let accepted = tokio::select! {
             _ = shutdown.cancelled() => break,
+            _ = store.closed() => return Err(io::Error::other("the store task is gone")),
             accepted = listener.accept() => accepted?,
         };
 

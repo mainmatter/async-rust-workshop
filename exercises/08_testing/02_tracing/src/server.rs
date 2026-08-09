@@ -9,6 +9,7 @@ use tokio::{
     time::{Instant, interval, sleep, timeout},
 };
 use tokio_util::{sync::CancellationToken, task::TaskTracker};
+use tracing::{info, instrument, warn};
 
 use crate::{
     actor::StoreHandle,
@@ -69,6 +70,7 @@ pub async fn serve(
 
 /// Talks to one client until it goes away, stops saying anything, or the server is asked to stop,
 /// holding its connection slot for as long as it does.
+#[instrument(name = "connection", skip_all)]
 pub async fn handle_connection<S>(
     stream: S,
     store: &StoreHandle,
@@ -105,8 +107,13 @@ where
                 Ok(response) => response,
                 Err(_) => Response::Error("busy".to_owned()),
             },
-            Err(error) => Response::Error(error.to_string()),
+            Err(error) => {
+                warn!(request = %line, error = %error, "refused");
+                Response::Error(error.to_string())
+            }
         };
+
+        info!(request = %line, response = %response, "handled");
 
         writer.write_all(format!("{response}\n").as_bytes()).await?;
     }

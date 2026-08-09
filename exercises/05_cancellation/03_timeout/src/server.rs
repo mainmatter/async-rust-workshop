@@ -5,7 +5,7 @@ use std::{io, time::Duration};
 use tokio::{
     io::{AsyncBufReadExt, AsyncRead, AsyncWrite, AsyncWriteExt, BufReader},
     net::TcpListener,
-    time::{Instant, interval, sleep},
+    time::{Instant, interval, sleep, timeout},
 };
 
 use crate::{
@@ -60,7 +60,10 @@ where
         idle_deadline.as_mut().reset(Instant::now() + idle);
 
         let response = match Request::parse(&line) {
-            Ok(request) => store.apply(request).await,
+            Ok(request) => match timeout(REQUEST_LIMIT, store.apply(request)).await {
+                Ok(response) => response,
+                Err(_) => Response::Error("busy".to_owned()),
+            },
             Err(error) => Response::Error(error.to_string()),
         };
 

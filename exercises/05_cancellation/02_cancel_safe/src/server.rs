@@ -5,7 +5,7 @@ use std::{io, time::Duration};
 use tokio::{
     io::{AsyncBufReadExt, AsyncRead, AsyncWrite, AsyncWriteExt, BufReader},
     net::TcpListener,
-    time::{interval, sleep},
+    time::{Instant, interval, sleep},
 };
 
 use crate::{
@@ -36,19 +36,25 @@ pub async fn handle_connection<S>(stream: S, store: &StoreHandle, idle: Duration
 where
     S: AsyncRead + AsyncWrite,
 {
-    let (mut reader, mut writer) = tokio::io::split(stream);
+    let (reader, mut writer) = tokio::io::split(stream);
+    let mut requests = BufReader::new(reader).lines();
     let mut housekeeping = interval(TICK);
+
+    let idle_deadline = sleep(idle);
+    tokio::pin!(idle_deadline);
 
     loop {
         let line = tokio::select! {
-            line = read_line_by_hand(&mut reader) => line?,
+            line = requests.next_line() => line?,
             _ = housekeeping.tick() => continue,
-            _ = sleep(idle) => return Ok(()),
+            _ = &mut idle_deadline => return Ok(()),
         };
 
         let Some(line) = line else {
             return Ok(());
         };
+
+        idle_deadline.as_mut().reset(Instant::now() + idle);
 
         let response = match Request::parse(&line) {
             Ok(request) => store.apply(request).await,
@@ -56,30 +62,6 @@ where
         };
 
         writer.write_all(format!("{response}\n").as_bytes()).await?;
-    }
-}
-
-/// Reads one line, a byte at a time, into a buffer of its own.
-async fn read_line_by_hand<R>(reader: &mut R) -> io::Result<Option<String>>
-where
-    R: AsyncRead + Unpin,
-{
-    use tokio::io::AsyncReadExt;
-
-    let mut line = Vec::new();
-
-    loop {
-        let mut byte = [0u8; 1];
-
-        if reader.read_exact(&mut byte).await.is_err() {
-            return Ok(None);
-        }
-
-        if byte[0] == b'\n' {
-            return Ok(Some(String::from_utf8_lossy(&line).into_owned()));
-        }
-
-        line.push(byte[0]);
     }
 }
 

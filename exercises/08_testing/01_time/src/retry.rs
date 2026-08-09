@@ -2,6 +2,8 @@
 
 use std::time::Duration;
 
+use tokio::time::sleep;
+
 /// How many times the client tries to reach a server before it gives up.
 pub const ATTEMPTS: u32 = 5;
 
@@ -13,14 +15,27 @@ pub const BASE_DELAY: Duration = Duration::from_millis(100);
 /// The wait after the first failure is `base`, and it doubles after every failure after that. The
 /// error from the last attempt is the one that comes back, and a failure nobody will retry is not
 /// waited for.
-pub async fn with_backoff<O, F, T, E>(attempts: u32, base: Duration, operation: O) -> Result<T, E>
+pub async fn with_backoff<O, F, T, E>(
+    attempts: u32,
+    base: Duration,
+    mut operation: O,
+) -> Result<T, E>
 where
     O: FnMut() -> F,
     F: Future<Output = Result<T, E>>,
 {
-    let _ = (attempts, base, operation);
+    let mut attempt = 1;
 
-    todo!("run the operation, back off, run it again, and give up when the attempts run out")
+    loop {
+        match operation().await {
+            Ok(value) => return Ok(value),
+            Err(error) if attempt >= attempts => return Err(error),
+            Err(_) => {
+                sleep(base * 2u32.pow(attempt - 1)).await;
+                attempt += 1;
+            }
+        }
+    }
 }
 
 #[cfg(test)]

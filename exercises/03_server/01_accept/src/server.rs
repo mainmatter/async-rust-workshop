@@ -2,7 +2,10 @@
 
 use std::io;
 
-use tokio::net::{TcpListener, TcpStream};
+use tokio::{
+    io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
+    net::{TcpListener, TcpStream},
+};
 
 use crate::{
     Store,
@@ -10,13 +13,28 @@ use crate::{
 };
 
 /// Serves clients, one at a time, until the listener gives up.
-pub async fn serve(listener: TcpListener, store: Store) -> io::Result<()> {
-    todo!("accept a connection, hand it to `handle_connection`, then accept the next one")
+pub async fn serve(listener: TcpListener, mut store: Store) -> io::Result<()> {
+    loop {
+        let (stream, _) = listener.accept().await?;
+        let _ = handle_connection(stream, &mut store).await;
+    }
 }
 
 /// Talks to one client until it goes away.
 pub async fn handle_connection(stream: TcpStream, store: &mut Store) -> io::Result<()> {
-    todo!("a line in, a response out, until `next_line` returns `None`")
+    let (reader, mut writer) = stream.into_split();
+    let mut requests = BufReader::new(reader).lines();
+
+    while let Some(line) = requests.next_line().await? {
+        let response = match Request::parse(&line) {
+            Ok(request) => apply(request, store),
+            Err(error) => Response::Error(error.to_string()),
+        };
+
+        writer.write_all(format!("{response}\n").as_bytes()).await?;
+    }
+
+    Ok(())
 }
 
 /// Applies a request to the store.
