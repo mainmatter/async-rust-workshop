@@ -18,9 +18,20 @@
 //!
 //! Fix `handle_connection` by reading with `next_line` again, and delete `read_line_by_hand`.
 //!
+//! Then look at the third branch, because the tick broke that one too, for a related reason.
+//! `sleep(idle)` is built inside the `select!`, so every tick throws the deadline away and starts a
+//! fresh thirty seconds. With a tick every five, the idle timeout you wrote in the last exercise
+//! can never fire, and one of the tests says so.
+//!
+//! A future that has to outlive the iteration has to live outside it. Build the sleep once, pin it
+//! with `tokio::pin!` so the branch can poll it by `&mut` in place, and push the deadline forward
+//! with `Sleep::reset` once a line has arrived.
+//!
 //! The habit to take home: before putting a call in a `select!` branch, look up whether its docs
 //! say it is cancel safe. Tokio documents this per method, under "Cancel safety". If it does not
-//! say, or if you wrote it yourself, assume it is not.
+//! say, or if you wrote it yourself, assume it is not. And whatever you build inside the `select!`
+//! starts over every time round the loop, which is occasionally what you want and is never what
+//! you want from a deadline.
 
 pub mod actor;
 pub mod protocol;

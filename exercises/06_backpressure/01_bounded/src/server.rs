@@ -5,7 +5,7 @@ use std::{io, time::Duration};
 use tokio::{
     io::{AsyncBufReadExt, AsyncRead, AsyncWrite, AsyncWriteExt, BufReader},
     net::TcpListener,
-    time::{interval, sleep, timeout},
+    time::{Instant, interval, sleep, timeout},
 };
 
 use crate::{
@@ -44,16 +44,21 @@ where
     let mut requests = BufReader::new(reader).lines();
     let mut housekeeping = interval(TICK);
 
+    let idle_deadline = sleep(idle);
+    tokio::pin!(idle_deadline);
+
     loop {
         let line = tokio::select! {
             line = requests.next_line() => line?,
             _ = housekeeping.tick() => continue,
-            _ = sleep(idle) => return Ok(()),
+            _ = &mut idle_deadline => return Ok(()),
         };
 
         let Some(line) = line else {
             return Ok(());
         };
+
+        idle_deadline.as_mut().reset(Instant::now() + idle);
 
         let response = match Request::parse(&line) {
             Ok(request) => match timeout(REQUEST_LIMIT, store.try_apply(request)).await {

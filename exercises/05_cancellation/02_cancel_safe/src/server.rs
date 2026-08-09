@@ -150,6 +150,32 @@ mod tests {
     }
 
     #[tokio::test(start_paused = true)]
+    async fn a_client_that_says_nothing_is_still_hung_up_on() {
+        let mut client = connect();
+
+        let hung_up = timeout(IDLE * 2, client.lines.next_line())
+            .await
+            .expect("the deadline is thrown away and rebuilt on every tick")
+            .unwrap();
+
+        assert_eq!(hung_up, None);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn a_client_that_keeps_talking_is_left_alone() {
+        let mut client = connect();
+
+        for _ in 0..3 {
+            assert_eq!(client.request("SET users alice hello").await, "OK");
+
+            advance(IDLE - Duration::from_secs(1)).await;
+            settle().await;
+        }
+
+        assert_eq!(client.request("GET users alice").await, "VALUE hello");
+    }
+
+    #[tokio::test(start_paused = true)]
     async fn ticks_do_not_close_the_connection() {
         let mut client = connect();
 
