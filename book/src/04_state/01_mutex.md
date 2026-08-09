@@ -1,6 +1,7 @@
 # A store every connection can reach
 
-The server from chapter 3 answers `ERR` to everything because it has no state. Give it some:
+The server from chapter 3 gives every connection a store of its own, so no client can see what any
+other one wrote. Give them one store between them:
 
 ```rust
 pub async fn serve(listener: TcpListener, store: Arc<Mutex<Store>>) -> io::Result<()> {

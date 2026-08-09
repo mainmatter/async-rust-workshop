@@ -28,24 +28,23 @@ the right default: a connection's problems belong to that connection.
 obviously the local outlives it, because the compiler cannot see that and the runtime does not
 promise it.
 
-So this exercise ships without a store at all. The server parses requests, answers `ERR` to
-everything, and proves that two clients are being read from at the same time. That is a deliberately
-useless server, and its uselessness is precisely the question chapter 4 answers: **who owns the
-state when every connection is its own task?**
+So for now each connection gets a `Store` of its own. That compiles, and it is worse than it looks:
+`SET users alice hello` is answered `OK`, and the next client to ask for `alice` is told `NIL`,
+because the write went into a `HashMap` that dies with the connection that made it. A server that
+loses your data and says `OK` is worth meeting once, deliberately, and it is precisely the question
+chapter 4 answers: **who owns the state when every connection is its own task?**
 
-## Interleaving, on purpose
+## Proving it, rather than hoping
 
-The test drives two clients by hand:
+The test opens a second connection while the first one is still open, and puts a deadline on the
+answer:
 
 ```rust
-first.send("SET users alice hello").await;
-second.send("SET users bob hi").await;
-first.response().await;
-second.response().await;
+let answered = timeout(Duration::from_secs(5), second.request("SET users bob hi")).await;
 ```
 
-Sequential code would deadlock here: the first client's response is not read until after the second
-client's request has been sent, so a server that finishes one connection before starting the next
-never gets there. This is how to test for concurrency rather than hope for it, and the test fails by
-timing out rather than by hanging forever, which is a courtesy worth extending to your own test
-suites.
+The one-client-at-a-time server from the last exercise never answers that, because it is still
+inside `handle_connection` for the first client and stays there until that client hangs up. This is
+how to test for concurrency rather than hope for it, and the deadline is the part worth copying: the
+test fails in five seconds with a message rather than hanging forever, which is a courtesy worth
+extending to your own suites.
