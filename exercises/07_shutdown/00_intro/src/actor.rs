@@ -125,7 +125,7 @@ mod tests {
     use tokio_util::{sync::CancellationToken, task::TaskTracker};
 
     use crate::{
-        Bucket, Key, Store,
+        Bucket, Key,
         actor::StoreHandle,
         protocol::{Request, Response},
     };

@@ -86,8 +86,6 @@ async fn run(mut store: Store, mut inbox: mpsc::Receiver<Command>, delay: Durati
 mod tests {
     use std::time::Duration;
 
-    use tokio::time::Instant;
-
     use crate::{
         Bucket, Key, Store, Value,
         actor::StoreHandle,
