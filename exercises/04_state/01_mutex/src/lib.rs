@@ -9,9 +9,16 @@
 //! Two things are worth getting right rather than merely getting to compile:
 //!
 //! - **Lock per request, not per connection.** A lock taken when the connection opens and released
-//!   when it closes is a server that serves one client, slowly, with extra machinery.
+//!   when it closes is a server that serves one client, slowly, with extra machinery. Two of the
+//!   tests below fail if you do that, because a second client never gets an answer.
 //! - **Do not hold the guard across the write.** Take the lock, apply the request, drop the guard,
 //!   then write the response. The client may be slow to read; the store should not care.
+//!
+//! No test checks the second one, and that is worth noticing rather than glossing over. It only
+//! costs anything when a write actually blocks, which needs a client slow enough to fill a socket
+//! buffer, and a test that arranged for that would be measuring the operating system's buffer sizes
+//! as much as your code. Some properties are real, cheap to get right, and not worth pinning with a
+//! test. Knowing which ones is part of the job.
 //!
 //! `Store::get` hands out a reference into the map, which cannot outlive the guard, so a read has
 //! to clone the value out. That clone is the price of sharing, and it is the first hint that this

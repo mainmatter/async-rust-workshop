@@ -48,7 +48,14 @@ meeting it here.
 
 ## Why `tokio::sync::Mutex` here
 
-The guard crosses an `.await` in this design, so it has to be Tokio's. If you restructure to drop the
-guard first, `std::sync::Mutex` works and is faster. Both are defensible; what is not defensible is
-`std::sync::Mutex` with the guard alive across an await, and the exercise ships a `compile_fail`
-doctest showing exactly what the compiler says when you try it.
+Follow the rule above and the guard never reaches an `.await`, so `std::sync::Mutex` would work here
+and would be faster: it is a plain lock with no task parking, and an uncontended one costs an atomic
+swap. The exercise uses Tokio's anyway, and it is worth being honest about why. It is the one that
+still compiles if you get the discipline wrong, so it is the one that lets this chapter be about
+where the lock goes rather than about which lock it is.
+
+Reach for `tokio::sync::Mutex` when the critical section genuinely has to await something, and for
+`std::sync::Mutex` otherwise. What is not defensible is `std::sync::Mutex` with the guard alive
+across an await: the guard is not `Send`, so the future is not either, and `tokio::spawn` refuses it
+with an error that points at the spawn rather than at the lock. The previous exercise ships a
+`compile_fail` doctest of exactly that, in `04_state/00_intro`.

@@ -71,8 +71,10 @@ wr
 congratulates you or shows you what went wrong. It will not let you move on until the current exercise
 passes. Solve it, run `wr` again, and it opens the next one.
 
-From chapter 3 onwards each exercise also builds two binaries, so you can talk to the server you have
-just written. From inside the exercise's directory:
+From chapter 3 onwards, every exercise that has a server in it also builds two binaries, so you can
+talk to the thing you have just written. The two that introduce a chapter rather than change the
+server, `03_server/00_intro` and `04_state/00_intro`, have no binaries and nothing to run. From
+inside the exercise's directory:
 
 ```bash
 cargo run                 # your server, on port 7878

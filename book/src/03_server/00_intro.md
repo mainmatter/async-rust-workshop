@@ -48,7 +48,8 @@ you owned halves that can be moved into separate tasks.
 
 ## The binaries
 
-From this chapter on, every exercise carries two of them:
+From this chapter on, every exercise that changes the server carries two of them. This one does not:
+it is the protocol and nothing else, so there is nothing here to run. From the next exercise onwards:
 
 ```bash
 cargo run                 # the server, on 127.0.0.1:7878

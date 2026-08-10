@@ -55,11 +55,18 @@ cargo bench
 ```
 
 It is not graded, and the number is not the lesson. What is worth doing is changing the shape of the
-load, more tasks, longer critical sections, a mix of reads and writes, and watching which way the
-answer moves. The actor pays a message round trip per request and wins when the alternative is
-tasks queueing on a lock; the mutex wins when the critical section is tiny and contention is low.
+load and watching which way the answer moves. `TASKS` and `REQUESTS` at the top of
+`benches/store.rs` are the two knobs: raise the first for more contention, the second for a longer
+run per task. The actor pays a message round trip per request and wins when the alternative is tasks
+queueing on a lock; the mutex wins when the critical section is tiny and contention is low.
+
+Expect the mutex to win as it ships, because this workload is the one that suits it: the critical
+section is a single `HashMap` insert, which is about as small as a critical section gets. That is a
+real result rather than a rigged one, and it is why "use the actor" is not the moral of this chapter.
 
 Benchmarks in async code are easy to get wrong. `criterion` measures wall-clock time around a block
-you give it, so the block has to include the runtime work you care about and nothing else, and a
-benchmark that spawns tasks is measuring the scheduler as much as your code. Treat the result as a
-direction, not a fact.
+you give it, so the block has to include the runtime work you care about and nothing else. Note what
+the benchmark therefore does *not* do: the store, and the task that owns it, are built once outside
+the timed block, because a benchmark that allocates a channel and spawns a task on every iteration is
+partly measuring how fast Tokio can start things. The fan-out stays inside, because that is the
+workload. Treat the result as a direction, not a fact.
