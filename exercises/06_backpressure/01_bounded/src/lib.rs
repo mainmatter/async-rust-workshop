@@ -5,7 +5,8 @@
 //! that will take longer than that, the client would be better off being told now.
 //!
 //! Add `StoreHandle::try_apply`, which does what `apply` does except that it gives up immediately
-//! when the mailbox is full, and use it in `handle_connection`.
+//! when the mailbox is full. `handle_connection` already calls it, so the whole exercise is in
+//! `src/actor.rs`.
 //!
 //! `mpsc::Sender::try_send` is the tool: it returns `Err(TrySendError::Full)` rather than waiting.
 //! Answer that with `ERR busy`, the same string the timeout uses, because from the client's side it

@@ -1,7 +1,7 @@
 # What the runtime actually does
 
-This chapter is the only one with no exercise. It exists so that the vocabulary the rest of the day
-leans on means the same thing to everyone in the room.
+This chapter has no code to write. It exists so that the vocabulary the rest of the day leans on
+means the same thing to everyone in the room.
 
 ## A future is inert
 
@@ -65,8 +65,10 @@ common way to write a future that hangs.
 itself. Pinning is the promise that the value will not move, which is what makes those references
 sound.
 
-The exercise contains a `Future` implemented by hand so you can watch the protocol happen. That is
-the only `poll` in this workshop. From here on, the runtime does it, and the day is about the
+The exercise contains a `Future` implemented by hand, so the protocol is twenty lines you can read
+rather than something you take on trust. Put an `eprintln!` in its `poll` and run
+`cargo test -- --nocapture` if you would rather watch it than read it. That is the only `poll` in
+this workshop. From here on, the runtime does it, and the day is about the
 decisions you still have to make: who owns the state, what happens when a future is dropped
 halfway, and what your server does when it cannot keep up.
 

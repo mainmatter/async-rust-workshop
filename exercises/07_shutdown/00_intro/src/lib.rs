@@ -11,8 +11,8 @@
 //! **Nobody notices a task that died.** A panic inside a spawned task does not propagate: it is
 //! captured, the task ends, and the panic is delivered to whoever awaits the `JoinHandle` as
 //! `Err(JoinError)`. If nobody awaits it, the panic message goes to the log and the process carries
-//! on missing a piece of itself. The tests below show a store task dying and the server carrying on
-//! serving errors, which is the failure mode to recognise.
+//! on missing a piece of itself. The tests in `src/actor.rs` show a store task dying and the server
+//! carrying on serving errors, which is the failure mode to recognise.
 //!
 //! `TaskTracker` from `tokio-util` is the other half: it counts the tasks you spawn through it and
 //! lets you wait for all of them. `JoinSet` does the same when you also want their results. Between

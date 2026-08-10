@@ -13,8 +13,9 @@
 //!
 //! That is not a bug in `timeout`, it is what cancelling your own wait means. Making the work stop
 //! too needs a second mechanism: the actor can ask `oneshot::Sender::is_closed` before it starts,
-//! and skip anything nobody is waiting for any more. The book shows that version; it is a good
-//! twenty minutes if you finish early.
+//! and skip anything nobody is waiting for any more. Writing that is a good twenty minutes if you
+//! finish early, and the third test is how you know it worked: it asserts the value landed, so it
+//! fails the moment the store starts dropping work nobody is waiting for.
 
 pub mod actor;
 pub mod protocol;

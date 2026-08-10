@@ -9,6 +9,11 @@
 //! above tells you what to add, and the tests show you its shape. You can also run the tests
 //! directly with `cargo test` from this exercise's directory, which is what `wr` does for you.
 //!
+//! One thing about the layout, because it changes at chapter 3. From there on `src/lib.rs` holds
+//! the brief and nothing else: the code to write is in `src/server.rs`, `src/actor.rs` or
+//! `src/wal.rs`, and the tests are at the bottom of whichever of those the brief sends you to, or
+//! in `tests/`. Each brief says which.
+//!
 //! From chapter 3 onwards each exercise also builds two binaries, so you can talk to what you have
 //! written: `cargo run` starts the server and `cargo run --bin client` opens a client against it.
 //!
