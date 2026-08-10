@@ -26,6 +26,9 @@ pub const MAX_CONNECTIONS: usize = 128;
 /// How often the connection wakes up to do its housekeeping.
 pub const TICK: Duration = Duration::from_secs(5);
 
+/// How long a shutdown waits for the connections still in flight before it stops waiting.
+pub const GRACE: Duration = Duration::from_secs(5);
+
 /// How long a single request may take before the client is told the store is busy.
 pub const REQUEST_LIMIT: Duration = Duration::from_secs(2);
 
@@ -61,7 +64,7 @@ pub async fn serve(
     }
 
     connections.close();
-    connections.wait().await;
+    let _ = timeout(GRACE, connections.wait()).await;
 
     Ok(())
 }

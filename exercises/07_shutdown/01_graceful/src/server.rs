@@ -25,6 +25,9 @@ pub const MAX_CONNECTIONS: usize = 128;
 /// How often the connection wakes up to do its housekeeping.
 pub const TICK: Duration = Duration::from_secs(5);
 
+/// How long a shutdown waits for the connections still in flight before it stops waiting.
+pub const GRACE: Duration = Duration::from_secs(5);
+
 /// How long a single request may take before the client is told the store is busy.
 pub const REQUEST_LIMIT: Duration = Duration::from_secs(2);
 
@@ -124,7 +127,11 @@ mod tests {
     };
     use tokio_util::sync::CancellationToken;
 
-    use crate::{Store, actor::StoreHandle, server::serve};
+    use crate::{
+        Store,
+        actor::StoreHandle,
+        server::{GRACE, serve},
+    };
 
     type Server = (
         SocketAddr,
@@ -200,6 +207,22 @@ mod tests {
         };
 
         assert!(!served, "the server answered after it had shut down");
+    }
+
+    #[tokio::test]
+    async fn a_connection_that_will_not_end_is_not_waited_for_forever() {
+        let (addr, shutdown, server) = spawn_server().await;
+
+        let mut silent = TestClient::connect(addr).await;
+        assert_eq!(silent.request("SET users alice hello").await, "OK");
+
+        shutdown.cancel();
+
+        timeout(GRACE * 2, server)
+            .await
+            .expect("a client that says nothing kept the shutdown waiting past the grace period")
+            .unwrap()
+            .unwrap();
     }
 
     #[tokio::test]

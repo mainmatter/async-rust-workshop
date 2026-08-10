@@ -52,16 +52,14 @@ missed, and the only way to find them is to go through them one at a time and as
 Notice that the connection tasks are not cancelled. They are left alone to finish what they are
 doing, and the process waits for them. A client mid-request gets its answer.
 
-Which is right until one connection decides to stay for an hour. Real shutdown has a deadline:
+Which is right until one connection decides to stay for an hour, so the waiting needs a deadline of
+its own. `GRACE` is the constant, `timeout` is the tool, and after it expires whatever is left is
+dropped on the floor. Kubernetes gives a pod `terminationGracePeriodSeconds`, thirty by default,
+before `SIGKILL`, so your own grace period wants to sit comfortably under whatever that is set to.
 
-```rust
-let _ = timeout(GRACE, connections.wait()).await;
-```
-
-and after the grace period, whatever is left is dropped on the floor. Kubernetes gives a pod
-`terminationGracePeriodSeconds` (30 by default) before `SIGKILL`, so your own grace period should be
-comfortably under whatever that is set to. This exercise leaves the deadline out to keep the test
-honest about what it is testing; adding it is three lines and worth doing in anything real.
+Note which way round the two mechanisms go. The token stops the loop taking new work; the deadline
+stops the drain taking forever. A shutdown with only the first hangs on its slowest client, and one
+with only the second cuts off work it had already accepted.
 
 ## Ordering
 

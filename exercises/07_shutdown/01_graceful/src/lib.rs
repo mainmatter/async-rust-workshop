@@ -14,10 +14,14 @@
 //! two in the wrong order hangs: a tracker that is not closed never finishes waiting, because more
 //! tasks could always arrive.
 //!
-//! Notice what is not here. Nothing forces a connection to end, so a client that sends nothing
-//! keeps the shutdown waiting until its idle timeout fires. Real servers pair this with a deadline:
-//! wait politely for a few seconds, then stop waiting. `tokio::time::timeout` around the `wait()`
-//! is all that takes, and the test does not require it.
+//! Then bound the waiting. Nothing forces a connection to end, so a client that sends nothing would
+//! keep the shutdown going until its idle timeout fires thirty seconds later, and a client that
+//! sends a request every twenty seconds would keep it going forever. Wait politely for `GRACE`,
+//! then stop waiting: `tokio::time::timeout` around the `wait()` is all that takes, and whatever is
+//! still running is left where it stands.
+//!
+//! Pick the grace period to sit comfortably under whatever kills you if you overrun it. Kubernetes
+//! gives a pod `terminationGracePeriodSeconds`, thirty by default, before `SIGKILL`.
 
 pub mod actor;
 pub mod protocol;

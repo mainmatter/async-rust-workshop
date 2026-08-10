@@ -20,8 +20,10 @@
 //!   into the message: `info!(request = %line, response = %response, "handled")`. Fields are what
 //!   make a log searchable. A collector can index `response` and answer "how many `ERR busy` in the
 //!   last hour" without anybody writing a regex.
-//! - Log a request the parser refused at WARN, with the error in a field called `error`. Something
-//!   a client got wrong is not something an operator should be woken up for.
+//! - Log a request the parser refused at WARN, carrying the same `request` field plus an `error`
+//!   one: `warn!(request = %line, error = %error, "refused")`. Something a client got wrong is not
+//!   something an operator should be woken up for, and the operator who does read it wants the line
+//!   that caused it, not just the complaint about it.
 //!
 //! `tests/instrumentation.rs` asserts on the spans and fields directly, through a `Layer` of its
 //! own, rather than by matching on printed output. That is the part worth taking home:
