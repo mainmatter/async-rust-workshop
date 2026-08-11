@@ -1,6 +1,9 @@
 # Tasks
 
-A task is a future the runtime has taken responsibility for. `tokio::spawn` hands one over:
+A task is a lightweight, non-blocking unit of execution, and its job is to drive one future to
+completion. Lightweight because it is a small heap allocation rather than a thread; non-blocking
+because it occupies a worker thread only for the length of a single poll. `tokio::spawn` creates one
+from a future:
 
 ```rust
 let handle = tokio::spawn(async move {

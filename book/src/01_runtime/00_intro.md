@@ -79,6 +79,6 @@ halfway, and what your server does when it cannot keep up.
 
 ## Where the work runs
 
-A **task** is a future the runtime owns and drives. `tokio::spawn` makes one, and from that moment
-it makes progress whether or not anybody awaits it. A **future** is just a value. The next chapter is
-about the difference.
+A **task** is a lightweight, non-blocking unit of execution that drives one future to completion.
+`tokio::spawn` makes one, and from that moment it makes progress whether or not anybody awaits it. A
+**future** is just a value. The next chapter is about the difference.

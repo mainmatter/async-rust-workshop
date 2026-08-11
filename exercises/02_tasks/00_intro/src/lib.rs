@@ -3,10 +3,11 @@
 //! Nothing to write here either. This one is about the difference between a future and a task,
 //! because the rest of the day is spent spawning things.
 //!
-//! **A future is a value. A task is a future the runtime owns.** `join!` runs futures concurrently
-//! inside one task: they take turns at the same await points, on the same thread, and if that task
-//! goes away they all go with it. `spawn` hands a future to the runtime as an independent unit,
-//! scheduled on its own, and on a multi-thread runtime free to move between threads.
+//! **A future is a value. A task is a unit of execution that drives one to completion.** `join!`
+//! runs futures concurrently inside one task: they take turns at the same await points, on the
+//! same thread, and if that task goes away they all go with it. `spawn` hands a future to the
+//! runtime as an independent unit, scheduled on its own, and on a multi-thread runtime free to move
+//! between threads.
 //!
 //! **That independence is what the bounds pay for.** A spawned future must be `Send`, because the
 //! runtime may move it to another thread, and `'static`, because the runtime cannot promise to
