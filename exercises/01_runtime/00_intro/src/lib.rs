@@ -13,8 +13,11 @@
 //! from.
 //!
 //! **Concurrency is not parallelism.** Two futures awaited one after the other take as long as
-//! both. The same two futures handed to `join!` take as long as the slower one, on a single thread,
-//! with no parallelism anywhere. `sequential` and `concurrent` below differ by nothing else.
+//! both. The same two handed to `join!` take as long as the slower one, on a single thread, with no
+//! parallelism anywhere, because `slow_get` spends its 50 milliseconds suspended and that is time
+//! the other future can use. The saving comes out of the waiting, not out of the work: `join!`
+//! interleaves polls, it does not add threads, so two futures that compute for 50 milliseconds each
+//! without ever suspending still take 100 under it.
 //!
 //! **The machinery, once, and then never again.** `PollCounter` is a `Future` written by hand. It
 //! returns `Poll::Pending` until it has been polled often enough, and wakes itself so the runtime

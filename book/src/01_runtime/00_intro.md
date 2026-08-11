@@ -45,8 +45,13 @@ let (first, second) = tokio::join!(
 ```
 
 No threads were involved. Both futures are polled by the same task on the same thread, and while one
-is waiting the other makes progress. Concurrency is about structure, parallelism is about hardware,
-and async Rust gives you the first one whether or not you have the second.
+is waiting the other makes progress.
+
+The saving comes out of the waiting, which is also where it stops. `join!` interleaves polls, it does
+not add threads: two futures that compute for 50ms each and never suspend still take 100ms under it,
+and the second one is not polled at all until the first returns. Concurrency is about structure,
+parallelism is about hardware, and async Rust gives you the first whether or not you have the second.
+Work that does not wait needs the second, which is the next chapter.
 
 ## The machinery, once
 
