@@ -49,6 +49,9 @@ A rough line: if a piece of work can take longer than about a hundred microsecon
 it does not belong on a runtime thread.
 
 For genuinely CPU-heavy work that is the _point_ of your service, `spawn_blocking` is a blunt
-instrument, and a dedicated `rayon` pool with a channel back into async code is the usual answer. The
-principle is the same either way: the runtime's threads exist to poll futures, and anything else you
-ask them to do is time they are not doing that.
+instrument: its pool is sized for threads that sit waiting on I/O, not for saturating cores. The
+usual answer is a pool sized to the cores instead, and [`rayon`](https://docs.rs/rayon), a data
+parallelism crate with its own work-stealing scheduler, is the common choice: you hand it the job and
+it answers on a `oneshot` channel back into async code. The principle is the same either way: the
+runtime's threads exist to poll futures, and anything else you ask them to do is time they are not
+doing that.
