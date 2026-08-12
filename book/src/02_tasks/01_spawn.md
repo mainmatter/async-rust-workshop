@@ -34,8 +34,9 @@ whether to spawn with an index or to collect the handles in order instead.
   all on the current task, so no `Send` requirement.
 - **`JoinSet`** for a dynamic number of tasks of the same type, when you want results as they
   arrive and the ability to abort them all at once.
-- **`FuturesUnordered`** for the same thing without spawning, so the futures stay on this task.
-  Cheaper, but no parallelism and no isolation from a panic.
+- **`FuturesOrdered` and `FuturesUnordered`**, from the [`futures`](https://docs.rs/futures) crate
+  rather than Tokio, for the same thing without spawning, so the futures stay on this task. Cheaper,
+  but no parallelism and no isolation from a panic.
 - **A `Vec<JoinHandle<T>>`** when you want results strictly in the order you started the work.
 
 ## What it costs
