@@ -19,6 +19,10 @@
 //! interleaves polls, it does not add threads, so two futures that compute for 50 milliseconds each
 //! without ever suspending still take 100 under it.
 //!
+//! **The clock in these tests is a fake.** `start_paused = true` freezes time, `tokio::time::Instant`
+//! reads that frozen clock, and whenever every task is parked the runtime jumps straight to the next
+//! deadline. Hence exactly 100 and exactly 50 below, and instantly. Chapter 8 teaches the trick.
+//!
 //! **The machinery, once, and then never again.** `PollCounter` is a `Future` written by hand. It
 //! returns `Poll::Pending` until it has been polled often enough, and wakes itself so the runtime
 //! knows to come back. That is the whole protocol: poll, get `Pending`, wait for the waker, poll
@@ -142,7 +146,7 @@ impl Debug for Value {
     }
 }
 
-/// A future that reports how many times it was polled before it was ready.
+/// A future that becomes ready after a given number of polls, and outputs that number.
 pub struct PollCounter {
     polls: u32,
     ready_after: u32,
