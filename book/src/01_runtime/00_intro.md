@@ -3,6 +3,20 @@
 This chapter has no code to write. It exists so that the vocabulary the rest of the day leans on
 means the same thing to everyone in the room.
 
+## What Tokio is
+
+The language gives you `async fn`, `.await`, and the `Future` trait, and then stops. There is no
+scheduler in `std`, no timer, and no way to wait on a socket. Tokio supplies those, along with async
+counterparts for the parts of `std` that would otherwise block a thread: files, TCP, channels,
+mutexes.
+
+`#[tokio::main]` builds a runtime, runs your future on it, and blocks the thread until that future
+finishes. It gives you a thread per core; `#[tokio::test]` gives you a single thread, which is worth
+knowing the first time a test passes and production does not. Which pieces you get is a matter of
+feature flags, which is why the exercises ask for different ones as the day goes on: `rt` and
+`macros` throughout, `time` wherever something sleeps, `net` from chapter 3, `sync` from chapter 4,
+`fs` in chapter 9, and `test-util` for the paused clock.
+
 ## A future is inert
 
 An `async fn` does not run anything when you call it. It builds a value, and until something polls
