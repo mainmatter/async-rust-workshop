@@ -66,7 +66,7 @@ real result rather than a rigged one, and it is why "use the actor" is not the m
 
 Benchmarks in async code are easy to get wrong. `criterion` measures wall-clock time around a block
 you give it, so the block has to include the runtime work you care about and nothing else. Note what
-the benchmark therefore does *not* do: the store, and the task that owns it, are built once outside
+the benchmark therefore does _not_ do: the store, and the task that owns it, are built once outside
 the timed block, because a benchmark that allocates a channel and spawns a task on every iteration is
 partly measuring how fast Tokio can start things. The fan-out stays inside, because that is the
 workload. Treat the result as a direction, not a fact.
