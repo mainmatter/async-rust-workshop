@@ -107,7 +107,7 @@ mod tests {
 
     const IDLE: Duration = Duration::from_secs(30);
 
-    #[tokio::test(start_paused = true)]
+    #[tokio::test]
     async fn a_store_that_answers_in_time_is_left_alone() {
         let (mut client, _store) = connect(Duration::ZERO);
 

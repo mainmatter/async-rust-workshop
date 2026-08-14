@@ -207,7 +207,7 @@ mod tests {
         assert_eq!(found.len(), 4);
     }
 
-    #[tokio::test(start_paused = true)]
+    #[tokio::test]
     async fn the_results_keep_the_order_of_the_keys() {
         let keys = ["dave", "nobody", "alice"]
             .map(|key| Key::parse(key).unwrap())

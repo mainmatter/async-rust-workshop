@@ -141,7 +141,7 @@ mod tests {
         );
     }
 
-    #[tokio::test(start_paused = true)]
+    #[tokio::test]
     async fn a_whole_request_still_works() {
         let mut client = connect();
 

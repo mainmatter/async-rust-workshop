@@ -129,7 +129,7 @@ mod tests {
         );
     }
 
-    #[tokio::test(start_paused = true)]
+    #[tokio::test]
     async fn a_store_that_is_keeping_up_answers_normally() {
         let store = StoreHandle::spawn(Store::new());
 
