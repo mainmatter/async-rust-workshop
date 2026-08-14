@@ -11,7 +11,6 @@ use tokio::{
 use tokio_util::{sync::CancellationToken, task::TaskTracker};
 
 use crate::{
-    Store,
     actor::StoreHandle,
     protocol::{Request, Response},
 };
@@ -101,26 +100,6 @@ where
         };
 
         writer.write_all(format!("{response}\n").as_bytes()).await?;
-    }
-}
-
-/// Applies a request to the store.
-pub fn apply(request: Request, store: &mut Store) -> Response {
-    match request {
-        Request::Get { bucket, key } => match store.get(&bucket, &key) {
-            Some(value) => Response::Value(value.clone()),
-            None => Response::Nil,
-        },
-
-        Request::Set { bucket, key, value } => {
-            store.insert(bucket, key, value);
-            Response::Ok
-        }
-
-        Request::Del { bucket, key } => match store.remove(&bucket, &key) {
-            Some(_) => Response::Ok,
-            None => Response::Nil,
-        },
     }
 }
 

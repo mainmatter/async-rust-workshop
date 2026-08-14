@@ -12,9 +12,8 @@ use std::sync::Arc;
 use criterion::{Criterion, criterion_group, criterion_main};
 use state_actor::{
     Bucket, Key, Store, Value,
-    actor::StoreHandle,
+    actor::{StoreHandle, apply},
     protocol::{Request, Response},
-    server::apply,
 };
 use tokio::{runtime::Runtime, sync::Mutex};
 

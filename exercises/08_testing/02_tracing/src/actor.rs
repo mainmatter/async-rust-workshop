@@ -10,7 +10,6 @@ use tokio::{
 use crate::{
     Store,
     protocol::{Request, Response},
-    server::apply,
 };
 
 /// How many requests may be waiting to be applied.
@@ -99,6 +98,26 @@ impl StoreHandle {
 pub struct Command {
     pub request: Request,
     pub reply: oneshot::Sender<Response>,
+}
+
+/// Applies a request to the store.
+pub fn apply(request: Request, store: &mut Store) -> Response {
+    match request {
+        Request::Get { bucket, key } => match store.get(&bucket, &key) {
+            Some(value) => Response::Value(value.clone()),
+            None => Response::Nil,
+        },
+
+        Request::Set { bucket, key, value } => {
+            store.insert(bucket, key, value);
+            Response::Ok
+        }
+
+        Request::Del { bucket, key } => match store.remove(&bucket, &key) {
+            Some(_) => Response::Ok,
+            None => Response::Nil,
+        },
+    }
 }
 
 async fn run(mut store: Store, mut inbox: mpsc::Receiver<Command>, delay: Duration) {

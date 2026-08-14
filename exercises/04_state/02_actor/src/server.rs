@@ -8,7 +8,6 @@ use tokio::{
 };
 
 use crate::{
-    Store,
     actor::StoreHandle,
     protocol::{Request, Response},
 };
@@ -28,26 +27,6 @@ pub async fn serve(listener: TcpListener, store: StoreHandle) -> io::Result<()> 
 /// Talks to one client until it goes away.
 pub async fn handle_connection(stream: TcpStream, store: &StoreHandle) -> io::Result<()> {
     todo!("the same loop again, now asking the store task instead of locking anything")
-}
-
-/// Applies a request to the store.
-pub fn apply(request: Request, store: &mut Store) -> Response {
-    match request {
-        Request::Get { bucket, key } => match store.get(&bucket, &key) {
-            Some(value) => Response::Value(value.clone()),
-            None => Response::Nil,
-        },
-
-        Request::Set { bucket, key, value } => {
-            store.insert(bucket, key, value);
-            Response::Ok
-        }
-
-        Request::Del { bucket, key } => match store.remove(&bucket, &key) {
-            Some(_) => Response::Ok,
-            None => Response::Nil,
-        },
-    }
 }
 
 #[cfg(test)]
