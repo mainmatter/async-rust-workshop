@@ -18,6 +18,7 @@ use tokio::{
     task::yield_now,
     time::timeout,
 };
+use tokio_util::sync::CancellationToken;
 use tracing::{
     Event, Level, Subscriber,
     field::{Field, Visit},
@@ -163,7 +164,16 @@ fn connect() -> TestClient {
     let (client, server) = tokio::io::duplex(1024);
     let store = StoreHandle::spawn(Store::new());
 
-    tokio::spawn(async move { handle_connection(server, &store, IDLE_LIMIT, permit()).await });
+    tokio::spawn(async move {
+        handle_connection(
+            server,
+            &store,
+            IDLE_LIMIT,
+            &CancellationToken::new(),
+            permit(),
+        )
+        .await
+    });
 
     let (reader, writer) = tokio::io::split(client);
 

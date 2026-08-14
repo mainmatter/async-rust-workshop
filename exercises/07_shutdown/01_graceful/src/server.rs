@@ -107,7 +107,7 @@ mod tests {
             tcp::{OwnedReadHalf, OwnedWriteHalf},
         },
         task::JoinHandle,
-        time::timeout,
+        time::{sleep, timeout},
     };
     use tokio_util::sync::CancellationToken;
 
@@ -141,27 +141,47 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn a_connection_in_flight_is_waited_for() {
-        let (addr, shutdown, mut server) = spawn_server().await;
+    async fn a_request_in_flight_is_still_answered() {
+        let store = StoreHandle::spawn_slow(Store::new(), Duration::from_millis(300));
+        let (addr, shutdown, server) = spawn_server_with(store).await;
+
+        let mut client = TestClient::connect(addr).await;
+        client.send("SET users alice hello").await;
+        sleep(Duration::from_millis(100)).await;
+
+        shutdown.cancel();
+
+        assert_eq!(
+            client.response().await.as_deref(),
+            Some("OK"),
+            "a request the store was already applying lost its answer"
+        );
+
+        timeout(Duration::from_secs(5), server)
+            .await
+            .expect("serve never returned")
+            .unwrap()
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn a_connection_takes_no_new_requests_after_the_cancel() {
+        let (addr, shutdown, server) = spawn_server().await;
 
         let mut client = TestClient::connect(addr).await;
         assert_eq!(client.request("SET users alice hello").await, "OK");
 
         shutdown.cancel();
 
-        assert!(
-            timeout(Duration::from_millis(300), &mut server)
-                .await
-                .is_err(),
-            "serve returned while a client was still connected"
+        assert_eq!(
+            client.response().await,
+            None,
+            "the connection was still open, waiting for another request"
         );
-
-        assert_eq!(client.request("GET users alice").await, "VALUE hello");
-        drop(client);
 
         timeout(Duration::from_secs(5), server)
             .await
-            .expect("serve never returned once the client had gone")
+            .expect("serve never returned")
             .unwrap()
             .unwrap();
     }
@@ -194,7 +214,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn a_connection_that_will_not_end_is_not_waited_for_forever() {
+    async fn a_silent_client_does_not_hold_the_shutdown() {
         let (addr, shutdown, server) = spawn_server().await;
 
         let mut silent = TestClient::connect(addr).await;
@@ -202,9 +222,9 @@ mod tests {
 
         shutdown.cancel();
 
-        timeout(GRACE * 2, server)
+        timeout(GRACE, server)
             .await
-            .expect("a client that says nothing kept the shutdown waiting past the grace period")
+            .expect("a client that says nothing kept the shutdown waiting")
             .unwrap()
             .unwrap();
     }
@@ -246,30 +266,35 @@ mod tests {
         }
 
         async fn request(&mut self, request: &str) -> String {
+            self.send(request).await;
+            self.response().await.expect("the server hung up")
+        }
+
+        async fn send(&mut self, request: &str) {
             self.writer
                 .write_all(format!("{request}\n").as_bytes())
                 .await
                 .unwrap();
+        }
 
+        async fn response(&mut self) -> Option<String> {
             timeout(Duration::from_secs(5), self.lines.next_line())
                 .await
-                .expect("the server never answered")
+                .expect("the server neither answered nor hung up")
                 .unwrap()
-                .expect("the server hung up")
         }
     }
 
     async fn spawn_server() -> Server {
+        spawn_server_with(StoreHandle::spawn(Store::new())).await
+    }
+
+    async fn spawn_server_with(store: StoreHandle) -> Server {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap();
         let shutdown = CancellationToken::new();
 
-        let server = tokio::spawn(serve(
-            listener,
-            StoreHandle::spawn(Store::new()),
-            128,
-            shutdown.clone(),
-        ));
+        let server = tokio::spawn(serve(listener, store, 128, shutdown.clone()));
 
         (addr, shutdown, server)
     }

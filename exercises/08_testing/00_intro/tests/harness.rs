@@ -21,7 +21,16 @@ async fn duplex_is_a_connection_without_a_network() {
     let (client, server) = tokio::io::duplex(1024);
     let store = StoreHandle::spawn(Store::new());
 
-    tokio::spawn(async move { handle_connection(server, &store, IDLE_LIMIT, permit()).await });
+    tokio::spawn(async move {
+        handle_connection(
+            server,
+            &store,
+            IDLE_LIMIT,
+            &CancellationToken::new(),
+            permit(),
+        )
+        .await
+    });
 
     let (reader, mut writer) = tokio::io::split(client);
     let mut responses = BufReader::new(reader).lines();
@@ -49,7 +58,16 @@ async fn a_paused_clock_makes_the_idle_timeout_free() {
     let (client, server) = tokio::io::duplex(1024);
     let store = StoreHandle::spawn(Store::new());
 
-    tokio::spawn(async move { handle_connection(server, &store, IDLE_LIMIT, permit()).await });
+    tokio::spawn(async move {
+        handle_connection(
+            server,
+            &store,
+            IDLE_LIMIT,
+            &CancellationToken::new(),
+            permit(),
+        )
+        .await
+    });
 
     let (reader, _writer) = tokio::io::split(client);
     let mut responses = BufReader::new(reader).lines();

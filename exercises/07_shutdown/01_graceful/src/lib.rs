@@ -6,7 +6,8 @@
 //! Make it stop properly. `serve` now takes a `CancellationToken`, and it should:
 //!
 //! - stop accepting new connections as soon as the token is cancelled,
-//! - let the connections already in flight finish what they are doing,
+//! - let the request each connection is already applying finish,
+//! - stop those connections taking a new request, and hang up,
 //! - and return only once they have.
 //!
 //! `select!` on `token.cancelled()` and `listener.accept()` gives you the first half. For the
@@ -14,11 +15,17 @@
 //! two in the wrong order hangs: a tracker that is not closed never finishes waiting, because more
 //! tasks could always arrive.
 //!
-//! Then bound the waiting. Nothing forces a connection to end, so a client that sends nothing would
-//! keep the shutdown going until its idle timeout fires thirty seconds later, and a client that
-//! sends a request every twenty seconds would keep it going forever. Wait politely for `GRACE`,
+//! The third bullet needs the token in `handle_connection` too, so it takes one now. Add an arm to
+//! the `select!` that waits for the next line: when the token wins, the connection returns and the
+//! socket closes. Only that wait is cancelled. A request already being applied is outside the
+//! `select!` and finishes normally, which is what makes this graceful rather than abrupt.
+//!
+//! Then bound the waiting anyway. Every await in this exercise is bounded, so a connection ends
+//! within `REQUEST_LIMIT` of the cancel, but `write_all` to a client that has stopped reading is
+//! not bounded by anything, and neither is the next thing somebody adds. Wait politely for `GRACE`,
 //! then stop waiting: `tokio::time::timeout` around the `wait()` is all that takes, and whatever is
-//! still running is left where it stands.
+//! still running is left where it stands. No test forces that path, which is the nature of a
+//! backstop.
 //!
 //! Pick the grace period to sit comfortably under whatever kills you if you overrun it. Kubernetes
 //! gives a pod `terminationGracePeriodSeconds`, thirty by default, before `SIGKILL`.

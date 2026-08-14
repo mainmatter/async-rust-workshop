@@ -54,9 +54,10 @@ pub async fn serve(
 
         let (stream, _) = accepted;
         let store = store.clone();
+        let shutdown = shutdown.clone();
 
         connections.spawn(async move {
-            let _ = handle_connection(stream, &store, IDLE_LIMIT, permit).await;
+            let _ = handle_connection(stream, &store, IDLE_LIMIT, &shutdown, permit).await;
         });
     }
 
@@ -66,12 +67,13 @@ pub async fn serve(
     Ok(())
 }
 
-/// Talks to one client until it goes away or stops saying anything, holding its connection
-/// slot for as long as it does.
+/// Talks to one client until it goes away, stops saying anything, or the server is asked to stop,
+/// holding its connection slot for as long as it does.
 pub async fn handle_connection<S>(
     stream: S,
     store: &StoreHandle,
     idle: Duration,
+    shutdown: &CancellationToken,
     _permit: OwnedSemaphorePermit,
 ) -> io::Result<()>
 where
@@ -89,6 +91,7 @@ where
             line = requests.next_line() => line?,
             _ = housekeeping.tick() => continue,
             _ = &mut idle_deadline => return Ok(()),
+            _ = shutdown.cancelled() => return Ok(()),
         };
 
         let Some(line) = line else {
