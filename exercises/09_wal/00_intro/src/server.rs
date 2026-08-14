@@ -5,7 +5,7 @@ use std::{io, sync::Arc, time::Duration};
 use tokio::{
     io::{AsyncBufReadExt, AsyncRead, AsyncWrite, AsyncWriteExt, BufReader},
     net::TcpListener,
-    sync::Semaphore,
+    sync::{OwnedSemaphorePermit, Semaphore},
     time::{Instant, interval, sleep, timeout},
 };
 use tokio_util::{sync::CancellationToken, task::TaskTracker};
@@ -57,8 +57,7 @@ pub async fn serve(
         let store = store.clone();
 
         connections.spawn(async move {
-            let _permit = permit;
-            let _ = handle_connection(stream, &store, IDLE_LIMIT).await;
+            let _ = handle_connection(stream, &store, IDLE_LIMIT, permit).await;
         });
     }
 
@@ -68,9 +67,15 @@ pub async fn serve(
     Ok(())
 }
 
-/// Talks to one client until it goes away or stops saying anything.
+/// Talks to one client until it goes away or stops saying anything, holding its connection
+/// slot for as long as it does.
 #[instrument(name = "connection", skip_all)]
-pub async fn handle_connection<S>(stream: S, store: &StoreHandle, idle: Duration) -> io::Result<()>
+pub async fn handle_connection<S>(
+    stream: S,
+    store: &StoreHandle,
+    idle: Duration,
+    _permit: OwnedSemaphorePermit,
+) -> io::Result<()>
 where
     S: AsyncRead + AsyncWrite,
 {

@@ -14,6 +14,7 @@ use testing_tracing::{
 };
 use tokio::{
     io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
+    sync::{OwnedSemaphorePermit, Semaphore},
     task::yield_now,
     time::timeout,
 };
@@ -162,7 +163,7 @@ fn connect() -> TestClient {
     let (client, server) = tokio::io::duplex(1024);
     let store = StoreHandle::spawn(Store::new());
 
-    tokio::spawn(async move { handle_connection(server, &store, IDLE_LIMIT).await });
+    tokio::spawn(async move { handle_connection(server, &store, IDLE_LIMIT, permit()).await });
 
     let (reader, writer) = tokio::io::split(client);
 
@@ -176,4 +177,11 @@ async fn settle() {
     for _ in 0..16 {
         yield_now().await;
     }
+}
+
+/// A permit from a semaphore of its own, because `handle_connection` holds a connection slot.
+fn permit() -> OwnedSemaphorePermit {
+    Arc::new(Semaphore::new(1))
+        .try_acquire_owned()
+        .expect("a fresh semaphore has a permit")
 }

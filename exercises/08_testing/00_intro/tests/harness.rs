@@ -1,6 +1,6 @@
 //! The three tools this workshop has been quietly using all day, in one place.
 
-use std::{net::SocketAddr, time::Duration};
+use std::{net::SocketAddr, sync::Arc, time::Duration};
 
 use testing_intro::{
     Store,
@@ -10,6 +10,7 @@ use testing_intro::{
 use tokio::{
     io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
     net::{TcpListener, TcpStream},
+    sync::{OwnedSemaphorePermit, Semaphore},
     time::{Instant, advance, timeout},
 };
 use tokio_util::sync::CancellationToken;
@@ -20,7 +21,7 @@ async fn duplex_is_a_connection_without_a_network() {
     let (client, server) = tokio::io::duplex(1024);
     let store = StoreHandle::spawn(Store::new());
 
-    tokio::spawn(async move { handle_connection(server, &store, IDLE_LIMIT).await });
+    tokio::spawn(async move { handle_connection(server, &store, IDLE_LIMIT, permit()).await });
 
     let (reader, mut writer) = tokio::io::split(client);
     let mut responses = BufReader::new(reader).lines();
@@ -48,7 +49,7 @@ async fn a_paused_clock_makes_the_idle_timeout_free() {
     let (client, server) = tokio::io::duplex(1024);
     let store = StoreHandle::spawn(Store::new());
 
-    tokio::spawn(async move { handle_connection(server, &store, IDLE_LIMIT).await });
+    tokio::spawn(async move { handle_connection(server, &store, IDLE_LIMIT, permit()).await });
 
     let (reader, _writer) = tokio::io::split(client);
     let mut responses = BufReader::new(reader).lines();
@@ -125,4 +126,11 @@ async fn connect(addr: SocketAddr) -> TestClient {
         lines: BufReader::new(reader).lines(),
         writer,
     }
+}
+
+/// A permit from a semaphore of its own, because `handle_connection` holds a connection slot.
+fn permit() -> OwnedSemaphorePermit {
+    Arc::new(Semaphore::new(1))
+        .try_acquire_owned()
+        .expect("a fresh semaphore has a permit")
 }

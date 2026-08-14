@@ -13,6 +13,12 @@
 //! `Semaphore::acquire_owned` gives a permit that can be moved into the connection task, which is
 //! what you want here: the permit's `Drop` releases it, so a connection that ends any way at all,
 //! including by panicking, gives its permit back.
+//!
+//! Hand the permit to `handle_connection` rather than parking it in the spawned block, which means
+//! adding a parameter to it. Nothing in its body uses the permit, so call the parameter `_permit`;
+//! it is held for the length of the call and dropped when the call returns. Written that way, the
+//! signature says the connection owns a slot, and forgetting the permit is a compile error rather
+//! than a limit that quietly does nothing.
 
 pub mod actor;
 pub mod protocol;

@@ -39,10 +39,29 @@ enough to refuse it.
 spawned task. `acquire_owned` takes an `Arc<Semaphore>` and returns a permit that owns its share, so
 it can go into the `async move` block.
 
-`let _permit = permit;` is the whole release mechanism. The permit lives as long as the task, and its
-`Drop` gives it back, so a connection that ends any way at all, including by panicking, returns its
-permit. Binding it to `_permit` rather than `_` matters: `let _ = permit;` drops it immediately, and
-the limit quietly stops existing.
+The permit's `Drop` is the whole release mechanism. There is no `release` call, so the slot comes
+back exactly when the permit dies, which means a connection that ends any way at all, including by
+panicking, returns its permit.
+
+That makes where the permit lives the only thing that matters, so hand it to `handle_connection`:
+
+```rust
+pub async fn handle_connection<S>(
+    stream: S,
+    store: &StoreHandle,
+    idle: Duration,
+    _permit: OwnedSemaphorePermit,   // held for the length of the call, dropped when it returns
+) -> io::Result<()>
+```
+
+Nothing in the body uses it, hence the underscore prefix, which silences the warning while leaving
+it an ordinary binding. Written this way the signature states the rule the code was only implying,
+and a caller that forgets the permit is a compile error rather than a limit that quietly does
+nothing.
+
+The alternative is to park it in the spawned block with `let _permit = permit;`, which works and is
+one character away from not working: `let _ = permit;` is not a binding at all, so it drops the
+permit on the spot and the limit stops existing silently.
 
 ## Choosing the number
 
