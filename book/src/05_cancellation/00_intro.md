@@ -14,9 +14,10 @@ When the sleep wins, the other future is dropped where it stands. Not signalled.
 mid-await, with whatever it was holding.
 
 This is the best and the sharpest thing about async Rust. Best, because cancellation is free and
-composable: `timeout`, `select!`, and dropping a `JoinHandle`'s task all work on any future, without
-that future having been written to support them. Sharpest, because a future that is dropped at an
-awkward moment leaves the world in whatever state it had reached.
+composable: `timeout`, `select!`, and `JoinHandle::abort` all work on any future, without that future
+having been written to support them. `abort` is the one that cancels a spawned task; dropping its
+`JoinHandle` detaches the task, as chapter 2 said, and detaching is not cancelling. Sharpest, because
+a future that is dropped at an awkward moment leaves the world in whatever state it had reached.
 
 ## Where the state goes
 
