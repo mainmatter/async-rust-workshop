@@ -10,7 +10,7 @@ loop {
 }
 ```
 
-Graceful shutdown is two mechanisms doing two different jobs.
+Graceful shutdown is three mechanisms doing three different jobs.
 
 **Stop taking new work**, by racing the accept against the token:
 
@@ -47,19 +47,40 @@ The general point is worth more than the fix: **cancellation is a property of th
 one await in it.** Every point where an iteration can block is a point where a shutdown can be
 missed, and the only way to find them is to go through them one at a time and ask what is watching.
 
-## Draining is not cancelling
+## What "finish what they are doing" means
 
-Notice that the connection tasks are not cancelled. They are left alone to finish what they are
-doing, and the process waits for them. A client mid-request gets its answer.
+The connection tasks are not cancelled, but they are told. `handle_connection` takes the token too,
+and its `select!` gains one arm:
 
-Which is right until one connection decides to stay for an hour, so the waiting needs a deadline of
-its own. `GRACE` is the constant, `timeout` is the tool, and after it expires whatever is left is
-dropped on the floor. Kubernetes gives a pod `terminationGracePeriodSeconds`, thirty by default,
-before `SIGKILL`, so your own grace period wants to sit comfortably under whatever that is set to.
+```rust
+let line = tokio::select! {
+    line = requests.next_line() => line?,
+    _ = housekeeping.tick() => continue,
+    _ = &mut idle_deadline => return Ok(()),
+    _ = shutdown.cancelled() => return Ok(()),   // stop waiting for another request
+};
+```
 
-Note which way round the two mechanisms go. The token stops the loop taking new work; the deadline
-stops the drain taking forever. A shutdown with only the first hangs on its slowest client, and one
-with only the second cuts off work it had already accepted.
+Which await that arm cancels is the whole design. It cancels the wait for the _next_ request, and
+nothing else. A request already parsed is applied and answered below the `select!`, untouched, so a
+client mid-request still gets its answer. What it does not get is another turn.
+
+Without that arm, the unit of work is the connection, and a client that sends a request every twenty
+seconds keeps the drain going forever. With it, the unit of work is the request, and the drain is
+bounded by the slowest single request rather than by client behaviour. That is what HTTP servers do
+when they answer `Connection: close` instead of reusing a keep-alive connection.
+
+Then bound the waiting anyway. `GRACE` is the constant, `timeout` is the tool, and after it expires
+whatever is left is dropped on the floor. Every await in this exercise is already bounded, so
+nothing should reach that deadline; the case it exists for is the one nobody bounded, such as
+`write_all` to a client that has stopped reading, where the kernel's send buffer fills and the write
+never completes. Kubernetes gives a pod `terminationGracePeriodSeconds`, thirty by default, before
+`SIGKILL`, so your own grace period wants to sit comfortably under whatever that is set to.
+
+Note which way round the three mechanisms go. The token stops the loop taking new connections and
+stops each connection taking new requests; the deadline stops the drain taking forever. A shutdown
+with only the first hangs on its slowest client, and one with only the last cuts off work it had
+already accepted.
 
 ## Ordering
 
