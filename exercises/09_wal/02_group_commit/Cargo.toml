@@ -13,4 +13,4 @@ tracing-subscriber = { workspace = true, features = ["env-filter", "fmt"] }
 
 [dev-dependencies]
 tempfile = { workspace = true }
-tokio = { workspace = true, features = ["fs", "io-util", "macros", "rt", "test-util", "time"] }
+tokio = { workspace = true, features = ["fs", "io-util", "macros", "rt", "time"] }

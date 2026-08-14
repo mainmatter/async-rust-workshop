@@ -9,4 +9,4 @@ publish.workspace = true
 tokio = { workspace = true, features = ["io-std", "io-util", "macros", "net", "rt", "rt-multi-thread", "sync", "time"] }
 
 [dev-dependencies]
-tokio = { workspace = true, features = ["io-util", "macros", "rt", "test-util", "time"] }
+tokio = { workspace = true, features = ["io-util", "macros", "rt", "time"] }
