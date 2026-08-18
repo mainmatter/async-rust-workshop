@@ -2,10 +2,14 @@
 
 Welcome to Mainmatter's **Async Rust** workshop!
 
-You have written async Rust before. You know what `async fn` and `.await` do, you have used Tokio, and
-you have at some point stared at a program that was not doing what you told it to. This course is
-about the part that comes after the syntax: who owns your state, what happens when a future is
-dropped halfway through, and what your server does when it is asked for more than it can deliver.
+You are comfortable with Rust: ownership, traits, `Arc`, and what `Send` means. Async is the part you
+are less sure of. Perhaps you have written an `async fn`, awaited it, and left it there; perhaps you
+have run a Tokio service in production and watched it do something other than what you told it to.
+
+This course starts by making the vocabulary precise, what the runtime does, why a future does nothing
+until something polls it, and what a task actually is. It spends the rest of its time on the part
+that comes after the syntax: who owns your state, what happens when a future is dropped halfway
+through, and what your server does when it is asked for more than it can deliver.
 
 Everything runs on [Tokio](https://tokio.rs). Futures, `poll` and `Pin` get one chapter of
 explanation and no exercises, because this is a workshop about using async rather than implementing

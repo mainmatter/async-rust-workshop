@@ -10,7 +10,8 @@ You will work through a series of test-driven exercises, turning `minidb`, a sma
 store, into a networked one: concurrent, cancellable, back-pressured, shut down cleanly, and durable
 across a restart. Everything runs on [Tokio](https://tokio.rs).
 
-This workshop is designed for people who have written some async Rust and want to stop guessing.
+This workshop is designed for people who are comfortable with Rust and want to stop guessing when it
+comes to async.
 
 > [!NOTE]
 > This workshop has been written by [Mainmatter](https://mainmatter.com/rust-consulting/).\
