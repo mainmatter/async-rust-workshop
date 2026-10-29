@@ -51,4 +51,4 @@ Copyright © 2024- Mainmatter GmbH (https://mainmatter.com), released under the
 [PolyForm-Noncommercial-1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0).
 
 If you're planning to use this course internally at your company, please [reach out](mailto:training@mainmatter.com) for a license.
-We also offer this course as an [instructor-led workshop](https://mainmatter.com/training/learn-rust-starting-from-scratch/).
+We also offer this course as an [instructor-led workshop](https://mainmatter.com/training/async-rust/).
