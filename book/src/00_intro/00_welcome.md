@@ -92,3 +92,8 @@ Building the whole workspace at once warns about several binaries sharing the na
 `client`. That is expected: every exercise carries its own pair.
 
 That is the whole loop. Let's make sure it works.
+
+## License
+
+Copyright © 2024- Mainmatter GmbH (https://mainmatter.com), released under the
+[PolyForm-Noncommercial-1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0).
